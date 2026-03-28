@@ -1,0 +1,32 @@
+declare const NotSupportedError: ErrorConstructor;
+
+declare global {
+    interface Navigator {
+        getBattery(): Promise<BatteryManager>;
+    }
+}
+interface BatteryManager extends EventTarget {
+    readonly charging: boolean;
+    readonly chargingTime: number;
+    readonly dischargingTime: number;
+    readonly level: number;
+    onChange: ((this: BatteryManager, ev: Event) => any) | null;
+    onchargingchange: ((this: BatteryManager, ev: Event) => any) | null;
+    onchargingtimechange: ((this: BatteryManager, ev: Event) => any) | null;
+    ondischargingtimechange: ((this: BatteryManager, ev: Event) => any) | null;
+    onlevelchange: ((this: BatteryManager, ev: Event) => any) | null;
+}
+declare interface BatteryInstance {
+    get value(): Promise<BatteryManager>;
+    get supported(): boolean;
+    onChange(listener: (battery: BatteryManager) => void, options?: AddEventListenerOptions): () => void;
+    Constants: {};
+    Errors: {
+        NotSupportedError: typeof NotSupportedError;
+    };
+}
+
+declare const Battery: BatteryInstance;
+
+export { Battery as default };
+export type { BatteryInstance, BatteryManager };
