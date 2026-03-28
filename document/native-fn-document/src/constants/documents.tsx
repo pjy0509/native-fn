@@ -3124,9 +3124,13 @@ export function generateMarkdown(docs: Documents): string {
 
     lines.push("# native-fn API Reference");
     lines.push("![NPM](https://nodei.co/npm/native-fn.png?downloads=true&downloadRank=true&stars=true)<br>");
-    lines.push("![NPM Downloads](https://img.shields.io/npm/d18m/native-fn?style=flat&logo=npm&logoColor=%23CB3837&label=Download&color=%23CB3837&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Fnative-fn)");
-    lines.push("![GitHub Repo stars](https://img.shields.io/github/stars/pjy0509/native-fn?style=flat&logo=github&logoColor=181717&label=Stars&color=181717&link=https%3A%2F%2Fgithub.com%2Fpjy0509%2Fnative-fn)");
-    lines.push("![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)");
+    lines.push("<a href=\"https://www.npmjs.com/package/native-fn\">![NPM Downloads](https://img.shields.io/npm/d18m/native-fn?style=flat&logo=npm&logoColor=%23CB3837&label=Download&color=%23CB3837&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Fnative-fn)</a>");
+    lines.push("<a href=\"https://www.npmjs.com/package/native-fn\">![GitHub Repo stars](https://img.shields.io/github/stars/pjy0509/native-fn?style=flat&logo=github&logoColor=181717&label=Stars&color=181717&link=https%3A%2F%2Fgithub.com%2Fpjy0509%2Fnative-fn)</a>");
+    lines.push("<a href=\"https://github.com/pjy0509/native-fn.git\">![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)</a>");
+    lines.push("<a href=\"https://www.jsdelivr.com/package/npm/native-fn\" target=\"_blank\"><img alt=\"jsDelivr\" src=\"http://www.google.com/s2/favicons?domain=www.jsdelivr.com/\"></a>");
+    lines.push("<a href=\"https://www.npmjs.com/package/native-fn\" target=\"_blank\"><img alt=\"npm\" src=\"http://www.google.com/s2/favicons?domain=www.npmjs.com/\"></a>");
+    lines.push("<a href=\"https://github.com/pjy0509/native-fn.git\" target=\"_blank\"><img alt=\"repository\" src=\"http://www.google.com/s2/favicons?domain=https://github.com/pjy0509/native-fn.git/\"></a>");
+    lines.push("<a href=\"https://pjy0509.github.io/example/native-fn/\" target=\"_blank\"><img alt=\"homepage\" src=\"http://www.google.com/s2/favicons?domain=https://pjy0509.github.io/example/native-fn//\"></a>");
     lines.push(renderTOC(docs));
 
     for (const [namespace, entries] of Object.entries(docs)) {
