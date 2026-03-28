@@ -1,0 +1,166 @@
+{
+  "name": "native-fn",
+  "version": "1.1.8",
+  "description": " ",
+  "type": "module",
+
+  "main": "dist/native.cjs",
+  "module": "dist/native.mjs",
+  "browser": "dist/native.umd.js",
+  "types": "dist/index.d.ts",
+
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/native.mjs",
+      "require": "./dist/native.cjs",
+      "default": "./dist/native.mjs"
+    },
+    "./appearance": {
+      "types": "./dist/plugin/appearance/index.d.ts",
+      "import": "./dist/plugin/appearance/index.mjs",
+      "require": "./dist/plugin/appearance/index.cjs",
+      "default": "./dist/plugin/appearance/index.mjs"
+    },
+    "./badge": {
+      "types": "./dist/plugin/badge/index.d.ts",
+      "import": "./dist/plugin/badge/index.mjs",
+      "require": "./dist/plugin/badge/index.cjs",
+      "default": "./dist/plugin/badge/index.mjs"
+    },
+    "./battery": {
+      "types": "./dist/plugin/battery/index.d.ts",
+      "import": "./dist/plugin/battery/index.mjs",
+      "require": "./dist/plugin/battery/index.cjs",
+      "default": "./dist/plugin/battery/index.mjs"
+    },
+    "./clipboard": {
+      "types": "./dist/plugin/clipboard/index.d.ts",
+      "import": "./dist/plugin/clipboard/index.mjs",
+      "require": "./dist/plugin/clipboard/index.cjs",
+      "default": "./dist/plugin/clipboard/index.mjs"
+    },
+    "./dimension": {
+      "types": "./dist/plugin/dimension/index.d.ts",
+      "import": "./dist/plugin/dimension/index.mjs",
+      "require": "./dist/plugin/dimension/index.cjs",
+      "default": "./dist/plugin/dimension/index.mjs"
+    },
+    "./fullscreen": {
+      "types": "./dist/plugin/fullscreen/index.d.ts",
+      "import": "./dist/plugin/fullscreen/index.mjs",
+      "require": "./dist/plugin/fullscreen/index.cjs",
+      "default": "./dist/plugin/fullscreen/index.mjs"
+    },
+    "./geolocation": {
+      "types": "./dist/plugin/geolocation/index.d.ts",
+      "import": "./dist/plugin/geolocation/index.mjs",
+      "require": "./dist/plugin/geolocation/index.cjs",
+      "default": "./dist/plugin/geolocation/index.mjs"
+    },
+    "./notification": {
+      "types": "./dist/plugin/notification/index.d.ts",
+      "import": "./dist/plugin/notification/index.mjs",
+      "require": "./dist/plugin/notification/index.cjs",
+      "default": "./dist/plugin/notification/index.mjs"
+    },
+    "./open": {
+      "types": "./dist/plugin/open/index.d.ts",
+      "import": "./dist/plugin/open/index.mjs",
+      "require": "./dist/plugin/open/index.cjs",
+      "default": "./dist/plugin/open/index.mjs"
+    },
+    "./platform": {
+      "types": "./dist/plugin/platform/index.d.ts",
+      "import": "./dist/plugin/platform/index.mjs",
+      "require": "./dist/plugin/platform/index.cjs",
+      "default": "./dist/plugin/platform/index.mjs"
+    },
+    "./theme": {
+      "types": "./dist/plugin/theme/index.d.ts",
+      "import": "./dist/plugin/theme/index.mjs",
+      "require": "./dist/plugin/theme/index.cjs",
+      "default": "./dist/plugin/theme/index.mjs"
+    },
+    "./vibration": {
+      "types": "./dist/plugin/vibration/index.d.ts",
+      "import": "./dist/plugin/vibration/index.mjs",
+      "require": "./dist/plugin/vibration/index.cjs",
+      "default": "./dist/plugin/vibration/index.mjs"
+    },
+    "./permission": {
+      "types": "./dist/plugin/permission/index.d.ts",
+      "import": "./dist/plugin/permission/index.mjs",
+      "require": "./dist/plugin/permission/index.cjs",
+      "default": "./dist/plugin/permission/index.mjs"
+    },
+    "./pip": {
+      "types": "./dist/plugin/pip/index.d.ts",
+      "import": "./dist/plugin/pip/index.mjs",
+      "require": "./dist/plugin/pip/index.cjs",
+      "default": "./dist/plugin/pip/index.mjs"
+    }
+  },
+
+  "typesVersions": {
+    "*": {
+      "appearance": ["dist/plugin/appearance/index.d.ts"],
+      "badge": ["dist/plugin/badge/index.d.ts"],
+      "battery": ["dist/plugin/battery/index.d.ts"],
+      "clipboard": ["dist/plugin/clipboard/index.d.ts"],
+      "dimension": ["dist/plugin/dimension/index.d.ts"],
+      "fullscreen": ["dist/plugin/fullscreen/index.d.ts"],
+      "geolocation": ["dist/plugin/geolocation/index.d.ts"],
+      "notification": ["dist/plugin/notification/index.d.ts"],
+      "open": ["dist/plugin/open/index.d.ts"],
+      "platform": ["dist/plugin/platform/index.d.ts"],
+      "theme": ["dist/plugin/theme/index.d.ts"],
+      "vibration": ["dist/plugin/vibration/index.d.ts"],
+      "permission": ["dist/plugin/permission/index.d.ts"],
+      "pip": ["dist/plugin/pip/index.d.ts"],
+      "dist/*": ["dist/*"]
+    }
+  },
+
+  "files": [
+    "dist/**",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
+
+  "scripts": {
+    "build": "rollup -c"
+  },
+
+  "author": "pjy",
+  "license": "MIT",
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pjy0509/native-fn"
+  },
+  "homepage": "https://pjy0509.github.io/example/native-fn/",
+  "keywords": [
+    "app",
+    "app loader",
+    "app launcher",
+    "app-loader",
+    "app-launcher",
+    "appearance",
+    "engine",
+    "messenger",
+    "os",
+    "theme",
+    "theme color",
+    "theme-color"
+  ],
+  "devDependencies": {
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "rollup": "^4.52.5",
+    "rollup-plugin-dts": "^6.2.3",
+    "typescript": "^5.9.3"
+  }
+}
