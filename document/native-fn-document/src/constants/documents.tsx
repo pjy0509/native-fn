@@ -542,7 +542,7 @@ const TRY_IT_OUT = {
             }
 
             return <TryContainer>
-                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" title="Big Buck Bunny" showTitle/>
+                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" title="Elephant Dream" showTitle/>
 
                 <Spacing height="0.75rem"/>
 
@@ -1276,7 +1276,7 @@ const TRY_IT_OUT = {
             }
 
             return <TryContainer>
-                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" title="Big Buck Bunny" showTitle/>
+                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" title="For Bigger Blazes" showTitle/>
 
                 <Spacing height="0.75rem"/>
 
@@ -1341,7 +1341,7 @@ const TRY_IT_OUT = {
             }
 
             return <TryContainer>
-                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" title="Big Buck Bunny" showTitle/>
+                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" title="For Bigger Escape" showTitle/>
 
                 <Spacing height="0.75rem"/>
 
@@ -2990,6 +2990,14 @@ Native.vibration.stop();
     },
 };
 
+const CHANGELOG = {
+    "1.1.9": ["Update README.md"],
+    "1.1.8": ["Fix type mismatch in Contact that did not reflect actual values"],
+    "1.1.7": ["Add clipboard-read permission type to Native.permission"],
+    "1.1.6": ["Export constants and types to enable external imports"],
+    "1.1.5": ["First stable release"],
+};
+
 interface DocumentReturns {
     type: string;
     description?: string;
@@ -3119,6 +3127,8 @@ function renderTOC(docs: Documents): string {
     return lines.join("\n");
 }
 
+console.log(generateMarkdown(DOCUMENTS));
+
 export function generateMarkdown(docs: Documents): string {
     const lines: string[] = [];
 
@@ -3127,10 +3137,38 @@ export function generateMarkdown(docs: Documents): string {
     lines.push("<a href=\"https://www.npmjs.com/package/native-fn\">![NPM Downloads](https://img.shields.io/npm/d18m/native-fn?style=flat&logo=npm&logoColor=%23CB3837&label=Download&color=%23CB3837&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Fnative-fn)</a>");
     lines.push("<a href=\"https://www.npmjs.com/package/native-fn\">![GitHub Repo stars](https://img.shields.io/github/stars/pjy0509/native-fn?style=flat&logo=github&logoColor=181717&label=Stars&color=181717&link=https%3A%2F%2Fgithub.com%2Fpjy0509%2Fnative-fn)</a>");
     lines.push("<a href=\"https://github.com/pjy0509/native-fn.git\">![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)</a>");
+    lines.push("<br/>");
     lines.push("<a href=\"https://www.jsdelivr.com/package/npm/native-fn\" target=\"_blank\"><img alt=\"jsDelivr\" src=\"http://www.google.com/s2/favicons?domain=www.jsdelivr.com/\"></a>");
     lines.push("<a href=\"https://www.npmjs.com/package/native-fn\" target=\"_blank\"><img alt=\"npm\" src=\"http://www.google.com/s2/favicons?domain=www.npmjs.com/\"></a>");
     lines.push("<a href=\"https://github.com/pjy0509/native-fn.git\" target=\"_blank\"><img alt=\"repository\" src=\"http://www.google.com/s2/favicons?domain=https://github.com/pjy0509/native-fn.git/\"></a>");
-    lines.push("<a href=\"https://pjy0509.github.io/example/native-fn/\" target=\"_blank\"><img alt=\"homepage\" src=\"http://www.google.com/s2/favicons?domain=https://pjy0509.github.io/example/native-fn//\"></a>");
+    // lines.push("<a href=\"https://pjy0509.github.io/example/native-fn/\" target=\"_blank\"><img alt=\"homepage\" src=\"http://www.google.com/s2/favicons?domain=https://pjy0509.github.io/example/native-fn//\"></a>");
+
+    lines.push("## Installation");
+    lines.push("");
+    lines.push("**npm**");
+    lines.push("");
+    lines.push("```shell");
+    lines.push("npm i native-fn");
+    lines.push("```");
+    lines.push("");
+    lines.push("**yarn**");
+    lines.push("");
+    lines.push("```shell");
+    lines.push("yarn add native-fn");
+    lines.push("```");
+    lines.push("");
+    lines.push("**cdnjs**");
+    lines.push("");
+    lines.push("```html");
+    lines.push("<script src=\"https://unpkg.com/native-fn\"></script>");
+    lines.push("```");
+    lines.push("");
+    lines.push("**jsdelivr**");
+    lines.push("");
+    lines.push("```html");
+    lines.push("<script src=\"https://cdn.jsdelivr.net/npm/native-fn\"></script>");
+    lines.push("```");
+    lines.push("");
     lines.push(renderTOC(docs));
 
     for (const [namespace, entries] of Object.entries(docs)) {
@@ -3140,6 +3178,4 @@ export function generateMarkdown(docs: Documents): string {
     return lines.join("\n");
 }
 
-console.log(generateMarkdown(DOCUMENTS));
-
-export default DOCUMENTS;
+export {DOCUMENTS, CHANGELOG};

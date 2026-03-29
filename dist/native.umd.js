@@ -4,7 +4,7 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Native = factory());
 })(this, (function () { 'use strict';
 
-  var version = "1.1.8";
+  var version = "1.1.9";
   var packageJSON = {
   	version: version};
 

@@ -10,9 +10,8 @@ import ThemeToggleBtn from "./components/form/ThemeToggleButton";
 import Typography from "./components/form/Typography";
 import Mermaid from "./components/Mermaid";
 import Spacing from "./components/form/Spacing";
-import DOCUMENTS from "./constants/documents";
+import {DOCUMENTS, CHANGELOG} from "./constants/documents";
 import Divider from "./components/Driver";
-import Grid from "./components/Grid";
 import Row from "./components/Row";
 
 const PACKAGE_NAME = 'native-fn' as const;
@@ -353,8 +352,29 @@ export default function App() {
                     </SidebarHeader>
 
                     <NavigationScrollArea ref={navScrollRef}>
-                        {Object.entries(DOCUMENTS).map(
-                            ([entryPoint, methods]) => (
+                        <NavigationSection>
+                            <NavigationList>
+                                <NavigationItem>
+                                    <NavigationLink
+                                        active={activeSection === "Installation"}
+                                        onClick={() =>
+                                            scrollToId(
+                                                "Installation",
+                                                mainScrollbarRef.current,
+                                                closeNavOnMobile
+                                            )
+                                        }
+                                    >
+                                        Installation
+                                    </NavigationLink>
+                                </NavigationItem>
+                            </NavigationList>
+                        </NavigationSection>
+
+                        <Divider marginX="24px"/>
+
+                        {
+                            Object.entries(DOCUMENTS).map(([entryPoint, methods]) => (
                                 <NavigationSection key={entryPoint}>
                                     <NavigationList>
                                         <NavigationItem>
@@ -372,33 +392,78 @@ export default function App() {
                                             </NavigationLink>
 
                                             <NavigationSublist>
-                                                {Object.keys(methods).map(
-                                                    method => {
-                                                        const id = `${entryPoint}-${method}`;
-                                                        return (
-                                                            <li key={id}>
-                                                                <NavigationSublink
-                                                                    active={activeSubsection === id}
-                                                                    onClick={() =>
-                                                                        scrollToId(
-                                                                            id,
-                                                                            mainScrollbarRef.current,
-                                                                            closeNavOnMobile
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    .{method}
-                                                                </NavigationSublink>
-                                                            </li>
-                                                        );
-                                                    }
-                                                )}
+                                                {
+                                                    Object.keys(methods).map(
+                                                        method => {
+                                                            const id = `${entryPoint}-${method}`;
+                                                            return (
+                                                                <li key={id}>
+                                                                    <NavigationSublink
+                                                                        active={activeSubsection === id}
+                                                                        onClick={() =>
+                                                                            scrollToId(
+                                                                                id,
+                                                                                mainScrollbarRef.current,
+                                                                                closeNavOnMobile
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        .{method}
+                                                                    </NavigationSublink>
+                                                                </li>
+                                                            );
+                                                        }
+                                                    )
+                                                }
                                             </NavigationSublist>
                                         </NavigationItem>
                                     </NavigationList>
                                 </NavigationSection>
-                            )
-                        )}
+                            ))
+                        }
+
+                        <Divider marginX="24px"/>
+
+                        <NavigationSection>
+                            <NavigationList>
+                                <NavigationItem>
+                                    <NavigationLink
+                                        active={activeSection === "ChangeLog"}
+                                        onClick={() =>
+                                            scrollToId(
+                                                "ChangeLog",
+                                                mainScrollbarRef.current,
+                                                closeNavOnMobile
+                                            )
+                                        }
+                                    >
+                                        Change Log
+                                    </NavigationLink>
+
+                                    {
+                                        Object.entries(CHANGELOG)
+                                            .map(([version, content]) => {
+                                                return <NavigationSublist>
+                                                    <li key={version}>
+                                                        <NavigationSublink
+                                                            active={activeSubsection === version}
+                                                            onClick={() =>
+                                                                scrollToId(
+                                                                    version,
+                                                                    mainScrollbarRef.current,
+                                                                    closeNavOnMobile
+                                                                )
+                                                            }
+                                                        >
+                                                            {version}
+                                                        </NavigationSublink>
+                                                    </li>
+                                                </NavigationSublist>
+                                            })
+                                    }
+                                </NavigationItem>
+                            </NavigationList>
+                        </NavigationSection>
                     </NavigationScrollArea>
                 </Sidebar>
 
@@ -432,12 +497,36 @@ export default function App() {
                             </Row>
                         </div>
 
-                        {/*<Typography.Body2>*/}
-                        {/*    <img src="https://img.shields.io/npm/dm/native-fn?color=red&logo=npm&label=NPM%20DOWNLOADS&style=for-the-badge" alt=""/>*/}
-                        {/*    <img src="https://img.shields.io/github/stars/faisalman/native-fn?color=yellow&logo=github&style=for-the-badge" alt=""/>*/}
-                        {/*</Typography.Body2>*/}
-
                         <Spacing height="4rem"/>
+
+                        <div id="Installation">
+                            <Card title="Installation">
+                                <FieldLabel>npm</FieldLabel>
+                                <Code language="sh" code={"npm i " + PACKAGE_NAME}/>
+
+                                <Spacing height="0.75rem"/>
+
+                                <FieldLabel>yarn</FieldLabel>
+                                <Code language="sh" code={"yarn add " + PACKAGE_NAME}/>
+
+                                <Spacing height="0.75rem"/>
+
+                                <FieldLabel>cdnjs</FieldLabel>
+                                <Code language="html" code={"<script src=\"https://unpkg.com/" + PACKAGE_NAME + "\"></script>"}/>
+
+                                <Spacing height="0.75rem"/>
+
+                                <FieldLabel>JsDelivr</FieldLabel>
+                                <Code language="html" code={"<script src=\"https://cdn.jsdelivr.net/npm/" + PACKAGE_NAME + "\"></script>"}/>
+                            </Card>
+
+                            <Spacing height="3rem"/>
+                        </div>
+
+                        <>
+                            <Divider/>
+                            <Spacing height="3rem"/>
+                        </>
 
                         {
                             Object.entries(DOCUMENTS)
@@ -525,6 +614,38 @@ export default function App() {
                                     </div>
                                 )
                         }
+
+                        <>
+                            <Divider/>
+                            <Spacing height="3rem"/>
+                        </>
+
+                        <div id="ChangeLog">
+                            <Card title="ChangeLog">
+                                {
+                                    Object.entries(CHANGELOG)
+                                        .map(([version, contents]) => {
+                                            return <React.Fragment key={version}>
+                                                <FieldLabel id={version}>
+                                                    <Typography.H4>{version}</Typography.H4>
+                                                </FieldLabel>
+
+                                                <ul style={{marginLeft: "1rem"}}>
+                                                    {
+                                                        contents.map((content, i) => {
+                                                            return <li key={`${version}-${i}`}>
+                                                                <Typography.Body2>{content}</Typography.Body2>
+                                                            </li>
+                                                        })
+                                                    }
+                                                </ul>
+
+                                                <Spacing height="1.5rem"/>
+                                            </React.Fragment>
+                                        })
+                                }
+                            </Card>
+                        </div>
                     </Container>
                 </MainContent>
             </Layout>

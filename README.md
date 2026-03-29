@@ -1,13 +1,38 @@
 # native-fn API Reference
-<a href="https://www.npmjs.com/package/native-fn">![NPM](https://nodei.co/npm/native-fn.png?downloads=true&downloadRank=true&stars=true)<br></a>
+![NPM](https://nodei.co/npm/native-fn.png?downloads=true&downloadRank=true&stars=true)<br>
 <a href="https://www.npmjs.com/package/native-fn">![NPM Downloads](https://img.shields.io/npm/d18m/native-fn?style=flat&logo=npm&logoColor=%23CB3837&label=Download&color=%23CB3837&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Fnative-fn)</a>
-<a href="https://github.com/pjy0509/native-fn">![GitHub Repo stars](https://img.shields.io/github/stars/pjy0509/native-fn?style=flat&logo=github&logoColor=181717&label=Stars&color=181717&link=https%3A%2F%2Fgithub.com%2Fpjy0509%2Fnative-fn)</a>
-![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)
+<a href="https://www.npmjs.com/package/native-fn">![GitHub Repo stars](https://img.shields.io/github/stars/pjy0509/native-fn?style=flat&logo=github&logoColor=181717&label=Stars&color=181717&link=https%3A%2F%2Fgithub.com%2Fpjy0509%2Fnative-fn)</a>
+<a href="https://github.com/pjy0509/native-fn.git">![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)</a>
 <br/>
 <a href="https://www.jsdelivr.com/package/npm/native-fn" target="_blank"><img alt="jsDelivr" src="http://www.google.com/s2/favicons?domain=www.jsdelivr.com/"></a>
 <a href="https://www.npmjs.com/package/native-fn" target="_blank"><img alt="npm" src="http://www.google.com/s2/favicons?domain=www.npmjs.com/"></a>
 <a href="https://github.com/pjy0509/native-fn.git" target="_blank"><img alt="repository" src="http://www.google.com/s2/favicons?domain=https://github.com/pjy0509/native-fn.git/"></a>
-<a href="https://pjy0509.github.io/example/native-fn/" target="_blank"><img alt="homepage" src="http://www.google.com/s2/favicons?domain=https://pjy0509.github.io/example/native-fn//"></a>
+## Installation
+
+**npm**
+
+```shell
+npm i native-fn
+```
+
+**yarn**
+
+```shell
+yarn add native-fn
+```
+
+**cdnjs**
+
+```html
+<script src="https://unpkg.com/native-fn"></script>
+```
+
+**jsdelivr**
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/native-fn"></script>
+```
+
 ## Table of Contents
 
 - **[appearance](#appearance)**
