@@ -13,6 +13,8 @@ import Spacing from "./components/form/Spacing";
 import {DOCUMENTS, CHANGELOG} from "./constants/documents";
 import Divider from "./components/Driver";
 import Row from "./components/Row";
+import SpeedDial, {SpeedDialButton} from "./components/SpeedDial";
+import ContactModal from "./components/ContactModal";
 
 const PACKAGE_NAME = 'native-fn' as const;
 
@@ -125,6 +127,10 @@ const NavigationCloseButton = styled.button`
 
 const NavigationSection = styled.div`
     padding: 0.375rem 0;
+    
+    &:last-child {
+        margin-bottom: 80px;
+    }
 `;
 
 const NavigationList = styled.ul`
@@ -285,6 +291,7 @@ export default function App() {
     const [homepage, setHomepage] = React.useState<string | undefined>(undefined);
     const [repository, setRepository] = React.useState<string | undefined>(undefined);
     const [version, setVersion] = React.useState<string | undefined>(undefined);
+    const [contactOpen, setContactOpen] = React.useState<boolean>(false);
 
     const navScrollRef = React.useRef<HTMLDivElement>(null);
     const mainScrollRef = React.useRef<HTMLElement>(null);
@@ -337,7 +344,33 @@ export default function App() {
         <>
             <GlobalStyle/>
             <NavOverflowLock active={navigationOpen}/>
-            <ThemeToggleBtn size={38}/>
+
+            <ContactModal
+                isOpen={contactOpen}
+                onClose={() => setContactOpen(false)}
+                serviceId="service_65nmm58"
+                templateId="template_ytxtwti"
+                publicKey="fz1kJ-GV9MZd1ZMc6"
+            />
+
+            <SpeedDial>
+                <SpeedDialButton label="Appearance">
+                    <ThemeToggleBtn size={40}/>
+                </SpeedDialButton>
+
+                <SpeedDialButton label="Contact Us" onClick={() => setContactOpen(true)}>
+                    <svg width={16} height={16} viewBox="0 0 16 16" fill="none">
+                        <rect x="1.5" y="3.5" width="13" height="9" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M1.5 5l6.5 4.5L14.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                </SpeedDialButton>
+
+                <SpeedDialButton label="Go Top" onClick={() => mainScrollbarRef.current?.scrollTo(0, 0, 400)}>
+                    <svg width={16} height={16} viewBox="0 0 16 16" fill="none">
+                        <path d="M8 13V3M3 8l5-5 5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                </SpeedDialButton>
+            </SpeedDial>
 
             <Layout>
                 <NavigationOpenButton open={navigationOpen} onClick={() => setNavigationOpen(true)} aria-label="Open navigation">☰</NavigationOpenButton>

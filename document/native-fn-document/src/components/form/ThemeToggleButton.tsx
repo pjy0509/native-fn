@@ -198,8 +198,8 @@ const drift = keyframes`
 
 const Wrapper = styled.button<WrapperProps>`
     position: fixed;
-    top: 20px;
-    right: 20px;
+    //top: 20px;
+    //right: 20px;
     z-index: 200;
     width: ${({size}) => size}px;
     height: ${({size}) => size}px;
