@@ -21,3 +21,5 @@
 /document/native-fn-document/node_modules/
 /document/native-fn-document/node_modules/*
 /document/native-fn-document/node_modules/package-lock.json
+/document/native-fn-document/build/
+/document/native-fn-document/build/*

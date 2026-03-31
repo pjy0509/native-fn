@@ -519,51 +519,6 @@ const TRY_IT_OUT = {
                 <TryResult result={result}/>
             </TryContainer>;
         },
-        toggle: function TryItOut(): React.JSX.Element {
-            const [cssPath, setCssPath] = React.useState<string>("");
-            const [result, setResult] = React.useState<TryResultProps>(null);
-
-            async function run(): Promise<void> {
-                try {
-                    let element: Element | null = null;
-
-                    try {
-                        element = document.querySelector(cssPath);
-                    } catch (_) {
-                    }
-
-                    if (element === null) await Native.fullscreen.toggle();
-                    else await Native.fullscreen.toggle(element);
-
-                    setResult({ok: true, text: "Fullscreen toggled."});
-                } catch (e) {
-                    setResult({ok: false, text: safeStr(e)});
-                }
-            }
-
-            return <TryContainer>
-                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" title="Elephant Dream" showTitle/>
-
-                <Spacing height="0.75rem"/>
-
-                <InspectButton onSelectElement={setCssPath}/>
-
-                {
-                    cssPath
-                    && <>
-						<FieldLabel>Selected</FieldLabel>
-
-						<HintMessage>{cssPath}</HintMessage>
-					</>
-                }
-
-                <Spacing height="0.75rem"/>
-
-                <Button.Primary.Small onClick={run}>Run</Button.Primary.Small>
-
-                <TryResult result={result}/>
-            </TryContainer>;
-        },
         onChange: function TryItOut(): React.JSX.Element {
             const [result, setResult] = React.useState<TryResultProps>(null);
             const [subscribed, setSubscribed] = React.useState<boolean>(false);
@@ -572,12 +527,13 @@ const TRY_IT_OUT = {
             function subscribe(): void {
                 if (unsubRef.current) return;
 
-                unsubRef.current = Native.fullscreen.onChange(() => {
+                unsubRef.current = Native.fullscreen.onChange((payload) => {
                     setResult({
                         ok: true,
                         text: safeStr({
-                            isFullscreen: Native.fullscreen.isFullscreen,
-                            element: Native.fullscreen.element?.tagName ?? null,
+                            nativeEvent: payload.nativeEvent.type,
+                            element: payload.element.tagName,
+                            isFullscreen: payload.isFullscreen,
                         }),
                     });
                 });
@@ -605,8 +561,15 @@ const TRY_IT_OUT = {
             function subscribe(): void {
                 if (unsubRef.current) return;
 
-                unsubRef.current = Native.fullscreen.onError((event) => {
-                    setResult({ok: true, text: safeStr({type: event.type})});
+                unsubRef.current = Native.fullscreen.onError((payload) => {
+                    setResult({
+                        ok: true,
+                        text: safeStr({
+                            nativeEvent: payload.nativeEvent.type,
+                            element: payload.element.tagName,
+                            isFullscreen: payload.isFullscreen,
+                        }),
+                    });
                 });
 
                 setSubscribed(true);
@@ -1317,52 +1280,6 @@ const TRY_IT_OUT = {
                 <TryResult result={result}/>
             </TryContainer>;
         },
-        toggle: function TryItOut(): React.JSX.Element {
-            const [cssPath, setCssPath] = React.useState<string>("");
-            const [result, setResult] = React.useState<TryResultProps>(null);
-
-            async function run(): Promise<void> {
-                try {
-                    let element: Element | null = null;
-
-                    try {
-                        element = document.querySelector(cssPath);
-                    } catch (_) {
-                    }
-
-                    if (element === null) await Native.pip.toggle();
-                    else if (element instanceof HTMLVideoElement) await Native.pip.toggle(element)
-                    else return setResult({ok: false, text: 'The "' + element.tagName + '" element does not support Picture-in-Picture requests.'});
-
-                    setResult({ok: true, text: "Picture-in-Picture toggled."});
-                } catch (e) {
-                    setResult({ok: false, text: safeStr(e)});
-                }
-            }
-
-            return <TryContainer>
-                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" title="For Bigger Escape" showTitle/>
-
-                <Spacing height="0.75rem"/>
-
-                <InspectButton onSelectElement={setCssPath}/>
-
-                {
-                    cssPath
-                    && <>
-						<FieldLabel>Selected</FieldLabel>
-
-						<HintMessage>{cssPath}</HintMessage>
-					</>
-                }
-
-                <Spacing height="0.75rem"/>
-
-                <Button.Primary.Small onClick={run}>Run</Button.Primary.Small>
-
-                <TryResult result={result}/>
-            </TryContainer>;
-        },
         onChange: function TryItOut(): React.JSX.Element {
             const [result, setResult] = React.useState<TryResultProps>(null);
             const [subscribed, setSubscribed] = React.useState<boolean>(false);
@@ -1371,12 +1288,13 @@ const TRY_IT_OUT = {
             function subscribe(): void {
                 if (unsubRef.current) return;
 
-                unsubRef.current = Native.pip.onChange(() => {
+                unsubRef.current = Native.pip.onChange((payload) => {
                     setResult({
                         ok: true,
                         text: safeStr({
-                            isPip: Native.pip.isPip,
-                            element: Native.pip.element?.tagName ?? null,
+                            nativeEvent: payload.nativeEvent.type,
+                            element: payload.element.tagName,
+                            isPip: payload.isPip,
                         }),
                     });
                 });
@@ -1404,8 +1322,15 @@ const TRY_IT_OUT = {
             function subscribe(): void {
                 if (unsubRef.current) return;
 
-                unsubRef.current = Native.pip.onError((event) => {
-                    setResult({ok: true, text: safeStr({type: event.type})});
+                unsubRef.current = Native.pip.onError((payload) => {
+                    setResult({
+                        ok: true,
+                        text: safeStr({
+                            nativeEvent: payload.nativeEvent.type,
+                            element: payload.element.tagName,
+                            isPip: payload.isPip,
+                        }),
+                    });
                 });
 
                 setSubscribed(true);
