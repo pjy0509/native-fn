@@ -1,4 +1,4 @@
-import {DimensionInstance, Environment, EnvironmentPresetKey, EnvironmentPresetValues} from "../types";
+import {DimensionInstance, Environment, EnvironmentPresetValues} from "../types";
 import type {Dimensions} from "../types";
 import {FALLBACK_DIMENSION, MEDIA_QUERY_LIST, Orientation} from "../constants";
 import EventListener from "../../../utils/event-listener";

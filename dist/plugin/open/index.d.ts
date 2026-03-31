@@ -39,6 +39,14 @@ declare enum DirectoryExploreMode {
 }
 declare const SETTING_URL: Record<'Android' | 'Windows' | 'MacOS' | 'MacOS13+', Record<SettingType, string>>;
 
+declare enum OS {
+    Unknown = "Unknown",
+    Android = "Android",
+    iOS = "iOS",
+    Windows = "Windows",
+    MacOS = "MacOS"
+}
+
 declare const NotSupportedError: ErrorConstructor;
 
 declare global {
@@ -66,7 +74,6 @@ declare global {
         webkitDisplayingFullscreen?: boolean;
         onwebkitbeginfullscreen?: ((this: HTMLVideoElement, ev: Event) => any) | null;
         onwebkitendfullscreen?: ((this: HTMLVideoElement, ev: Event) => any) | null;
-        [key: symbol]: boolean | undefined;
     }
     interface Document {
         readonly fullscreenEnabled: boolean;
@@ -91,6 +98,33 @@ declare global {
         mozRequestFullScreen?: () => Promise<void>;
         msRequestFullscreen?: () => Promise<void>;
     }
+    var __nativeFnFsBridgeKey__: symbol | undefined;
+}
+
+declare global {
+    interface Navigator {
+        getUserMedia?(constraints?: MediaStreamConstraints): Promise<MediaStream>;
+        webkitGetUserMedia?(constraints: MediaStreamConstraints, successCallback: (stream: MediaStream) => void, errorCallback: (error: DOMException) => void): void;
+        mozGetUserMedia?(constraints: MediaStreamConstraints, successCallback: (stream: MediaStream) => void, errorCallback: (error: DOMException) => void): void;
+        msGetUserMedia?(constraints: MediaStreamConstraints, successCallback: (stream: MediaStream) => void, errorCallback: (error: DOMException) => void): void;
+    }
+}
+
+declare global {
+    interface HTMLVideoElement {
+        webkitSupportsPresentationMode?(mode: string): boolean;
+        webkitSetPresentationMode?(mode: string): void;
+        webkitPresentationMode?: string;
+        onwebkitpresentationmodechanged?: ((this: Element, ev: Event) => any) | null;
+    }
+    var __nativeFnPipBridgeKey__: symbol | undefined;
+}
+
+interface GPUAdapterInfo {
+    readonly vendor?: string;
+    readonly architecture?: string;
+    readonly device?: string;
+    readonly description?: string;
 }
 
 declare global {
@@ -154,40 +188,6 @@ interface GPURequestAdapterOptions {
 type GPUPowerPreference = 'low-power' | 'high-performance';
 interface GPUAdapter {
     readonly info: GPUAdapterInfo;
-}
-
-declare global {
-    interface Navigator {
-        getUserMedia?(constraints?: MediaStreamConstraints): Promise<MediaStream>;
-        webkitGetUserMedia?(constraints: MediaStreamConstraints, successCallback: (stream: MediaStream) => void, errorCallback: (error: DOMException) => void): void;
-        mozGetUserMedia?(constraints: MediaStreamConstraints, successCallback: (stream: MediaStream) => void, errorCallback: (error: DOMException) => void): void;
-        msGetUserMedia?(constraints: MediaStreamConstraints, successCallback: (stream: MediaStream) => void, errorCallback: (error: DOMException) => void): void;
-    }
-}
-
-declare global {
-    interface HTMLVideoElement {
-        webkitSupportsPresentationMode?: (mode: string) => boolean;
-        webkitSetPresentationMode?: (mode: string) => void;
-        webkitPresentationMode?: string;
-        onwebkitpresentationmodechanged?: ((this: HTMLVideoElement, ev: Event) => any) | null;
-        [key: symbol]: boolean | undefined;
-    }
-}
-
-interface GPUAdapterInfo {
-    readonly vendor?: string;
-    readonly architecture?: string;
-    readonly device?: string;
-    readonly description?: string;
-}
-
-declare enum OS {
-    Unknown = "Unknown",
-    Android = "Android",
-    iOS = "iOS",
-    Windows = "Windows",
-    MacOS = "MacOS"
 }
 
 declare const URLOpenError: ErrorConstructor;

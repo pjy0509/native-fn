@@ -1,5 +1,5 @@
 import { AppOpenState, CameraType, CaptureType, DirectoryExploreMode, ExplorerStartIn, SettingType } from "../constants";
-import { OS } from "../../platform/constants";
+import { OS } from "../../platform";
 import { URLOpenError } from "../errors/url-open-error";
 import { UserCancelledError } from "../errors/user-cancel-error";
 import { NotSupportedError } from "../../../errors/not-supported-error";

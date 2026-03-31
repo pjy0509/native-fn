@@ -8,11 +8,11 @@ const onChangeSubscriptionManager: SubscriptionManager<BatteryInstance, BatteryM
 let batteryRef: BatteryManager | null = null;
 
 const Battery: BatteryInstance = {
-    get value(): Promise<BatteryManager> {
-        return getValue();
-    },
     get supported(): boolean {
         return supported();
+    },
+    get value(): Promise<BatteryManager> {
+        return getValue();
     },
     onChange: onChangeSubscriptionManager.subscribe,
     Constants: {},

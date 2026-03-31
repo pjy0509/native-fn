@@ -511,7 +511,7 @@ export default function App() {
 
                                 <Spacing height="0.75rem"/>
 
-                                <FieldLabel>cdnjs</FieldLabel>
+                                <FieldLabel>unpkg</FieldLabel>
                                 <Code language="html" code={"<script src=\"https://unpkg.com/" + PACKAGE_NAME + "\"></script>"}/>
 
                                 <Spacing height="0.75rem"/>

@@ -1,9 +1,9 @@
 declare const NotSupportedError: ErrorConstructor;
 
 declare interface VibrationInstance {
+    get supported(): boolean;
     run(pattern: number | number[]): boolean;
     stop(): boolean;
-    get supported(): boolean;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;

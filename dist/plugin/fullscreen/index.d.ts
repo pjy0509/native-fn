@@ -1,18 +1,25 @@
 declare const NotSupportedError: ErrorConstructor;
 
+declare const InvalidStateError: ErrorConstructor;
+
 declare interface FullscreenInstance {
     supported: boolean;
     element: Element | null;
     isFullscreen: boolean;
     request(target?: Element, options?: FullscreenOptions): Promise<void>;
     exit(): Promise<void>;
-    toggle(target?: Element, options?: FullscreenOptions): Promise<void>;
-    onChange(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void;
-    onError(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void;
+    onChange(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
+    onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;
+        InvalidStateError: typeof InvalidStateError;
     };
+}
+declare interface FullscreenEventPayload {
+    nativeEvent: Event;
+    element: Element;
+    isFullscreen: boolean;
 }
 
 declare global {
@@ -23,7 +30,6 @@ declare global {
         webkitDisplayingFullscreen?: boolean;
         onwebkitbeginfullscreen?: ((this: HTMLVideoElement, ev: Event) => any) | null;
         onwebkitendfullscreen?: ((this: HTMLVideoElement, ev: Event) => any) | null;
-        [key: symbol]: boolean | undefined;
     }
     interface Document {
         readonly fullscreenEnabled: boolean;
@@ -48,8 +54,9 @@ declare global {
         mozRequestFullScreen?: () => Promise<void>;
         msRequestFullscreen?: () => Promise<void>;
     }
+    var __nativeFnFsBridgeKey__: symbol | undefined;
 }
-declare const _default: FullscreenInstance;
+declare const Fullscreen: FullscreenInstance;
 
-export { _default as default };
-export type { FullscreenInstance };
+export { Fullscreen as default };
+export type { FullscreenEventPayload, FullscreenInstance };

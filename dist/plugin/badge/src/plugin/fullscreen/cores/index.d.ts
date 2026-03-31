@@ -7,7 +7,6 @@ declare global {
         webkitDisplayingFullscreen?: boolean;
         onwebkitbeginfullscreen?: ((this: HTMLVideoElement, ev: Event) => any) | null;
         onwebkitendfullscreen?: ((this: HTMLVideoElement, ev: Event) => any) | null;
-        [key: symbol]: boolean | undefined;
     }
     interface Document {
         readonly fullscreenEnabled: boolean;
@@ -32,6 +31,7 @@ declare global {
         mozRequestFullScreen?: () => Promise<void>;
         msRequestFullscreen?: () => Promise<void>;
     }
+    var __nativeFnFsBridgeKey__: symbol | undefined;
 }
-declare const _default: FullscreenInstance;
-export default _default;
+declare const Fullscreen: FullscreenInstance;
+export default Fullscreen;

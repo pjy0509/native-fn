@@ -18,9 +18,9 @@ declare const Appearance: AppearanceInstance;
 declare const NotSupportedError: ErrorConstructor;
 
 declare interface BadgeInstance {
+    get supported(): boolean;
     set(contents: number): Promise<void>;
     clear(): Promise<void>;
-    get supported(): boolean;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;
@@ -46,8 +46,8 @@ interface BatteryManager extends EventTarget {
     onlevelchange: ((this: BatteryManager, ev: Event) => any) | null;
 }
 declare interface BatteryInstance {
-    get value(): Promise<BatteryManager>;
     get supported(): boolean;
+    get value(): Promise<BatteryManager>;
     onChange(listener: (battery: BatteryManager) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {
@@ -144,19 +144,26 @@ declare interface Environment {
 
 declare const Dimension: DimensionInstance;
 
+declare const InvalidStateError: ErrorConstructor;
+
 declare interface FullscreenInstance {
     supported: boolean;
     element: Element | null;
     isFullscreen: boolean;
     request(target?: Element, options?: FullscreenOptions): Promise<void>;
     exit(): Promise<void>;
-    toggle(target?: Element, options?: FullscreenOptions): Promise<void>;
-    onChange(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void;
-    onError(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void;
+    onChange(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
+    onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;
+        InvalidStateError: typeof InvalidStateError;
     };
+}
+declare interface FullscreenEventPayload {
+    nativeEvent: Event;
+    element: Element;
+    isFullscreen: boolean;
 }
 
 declare global {
@@ -167,7 +174,6 @@ declare global {
         webkitDisplayingFullscreen?: boolean;
         onwebkitbeginfullscreen?: ((this: HTMLVideoElement, ev: Event) => any) | null;
         onwebkitendfullscreen?: ((this: HTMLVideoElement, ev: Event) => any) | null;
-        [key: symbol]: boolean | undefined;
     }
     interface Document {
         readonly fullscreenEnabled: boolean;
@@ -192,14 +198,15 @@ declare global {
         mozRequestFullScreen?: () => Promise<void>;
         msRequestFullscreen?: () => Promise<void>;
     }
+    var __nativeFnFsBridgeKey__: symbol | undefined;
 }
-declare const _default$1: FullscreenInstance;
+declare const Fullscreen: FullscreenInstance;
 
 declare const PermissionNotGrantedError: ErrorConstructor;
 
 declare interface GeolocationInstance {
-    get value(): Promise<GeolocationCoordinates>;
     get supported(): boolean;
+    get value(): Promise<GeolocationCoordinates>;
     onChange(listener: (coordinates: GeolocationCoordinates) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {
@@ -278,6 +285,42 @@ declare enum DirectoryExploreMode {
     ReadWrite = "readwrite"
 }
 
+declare enum OS {
+    Unknown = "Unknown",
+    Android = "Android",
+    iOS = "iOS",
+    Windows = "Windows",
+    MacOS = "MacOS"
+}
+declare enum Devices {
+    Unknown = "Unknown",
+    Mobile = "Mobile",
+    Desktop = "Desktop"
+}
+declare enum Engines {
+    Unknown = "Unknown",
+    EdgeHTML = "EdgeHTML",
+    ArkWeb = "ArkWeb",
+    Blink = "Blink",
+    Presto = "Presto",
+    WebKit = "WebKit",
+    Trident = "Trident",
+    NetFront = "NetFront",
+    KHTML = "KHTML",
+    Tasman = "Tasman",
+    Gecko = "Gecko"
+}
+declare enum Browsers {
+    Unknown = "Unknown",
+    Chrome = "Chrome",
+    Safari = "Safari",
+    Edge = "Edge",
+    Firefox = "Firefox",
+    Opera = "Opera",
+    IE = "IE",
+    SamsungInternet = "SamsungInternet"
+}
+
 declare interface PlatformInstance {
     get ready(): Promise<void>;
     get userAgent(): string;
@@ -318,41 +361,69 @@ interface GPUAdapterInfo {
 }
 declare type GPU = Writeable<GPUAdapterInfo>;
 
-declare enum OS {
-    Unknown = "Unknown",
-    Android = "Android",
-    iOS = "iOS",
-    Windows = "Windows",
-    MacOS = "MacOS"
+declare global {
+    interface Navigator {
+        userAgent?: string;
+        userAgentData?: UserAgentData;
+        language?: string;
+        languages?: readonly string[];
+        browserLanguage?: string;
+        systemLanguage?: string;
+        userLanguage?: string;
+        standalone?: boolean;
+        gpu?: WebGPU;
+    }
+    interface NodeProcessVersions {
+        node?: string;
+        chrome?: string;
+    }
+    interface NodeProcess {
+        versions?: NodeProcessVersions;
+        type?: string;
+        platform?: string;
+        getSystemVersion?(): string;
+    }
+    var process: NodeProcess | undefined;
+    namespace Intl {
+        const Locale: {
+            new (tag: string): IntlLocale;
+        };
+    }
 }
-declare enum Devices {
-    Unknown = "Unknown",
-    Mobile = "Mobile",
-    Desktop = "Desktop"
+interface IntlLocale {
+    getTextInfo?(): IntlLocaleTextInfo;
+    textInfo: IntlLocaleTextInfo;
 }
-declare enum Engines {
-    Unknown = "Unknown",
-    EdgeHTML = "EdgeHTML",
-    ArkWeb = "ArkWeb",
-    Blink = "Blink",
-    Presto = "Presto",
-    WebKit = "WebKit",
-    Trident = "Trident",
-    NetFront = "NetFront",
-    KHTML = "KHTML",
-    Tasman = "Tasman",
-    Gecko = "Gecko"
+interface IntlLocaleTextInfo {
+    direction: 'rtl' | 'ltr';
 }
-declare enum Browsers {
-    Unknown = "Unknown",
-    Chrome = "Chrome",
-    Safari = "Safari",
-    Edge = "Edge",
-    Firefox = "Firefox",
-    Opera = "Opera",
-    IE = "IE",
-    SamsungInternet = "SamsungInternet"
+interface ModernUserAgentDataBrand {
+    brand: string;
+    version: string;
 }
+type UserAgentDataBrand = ModernUserAgentDataBrand | string | null | undefined;
+interface UserAgentDataValues {
+    brands?: UserAgentDataBrand[];
+    fullVersionList?: UserAgentDataBrand[];
+    platformVersion?: string | null | undefined;
+    platform?: string | null | undefined;
+    mobile?: boolean;
+}
+interface UserAgentData {
+    getHighEntropyValues?(hints: string[]): Promise<UserAgentDataValues>;
+}
+interface WebGPU {
+    requestAdapter(options?: GPURequestAdapterOptions): Promise<GPUAdapter | null>;
+}
+interface GPURequestAdapterOptions {
+    powerPreference?: GPUPowerPreference;
+    forceFallbackAdapter?: boolean;
+}
+type GPUPowerPreference = 'low-power' | 'high-performance';
+interface GPUAdapter {
+    readonly info: GPUAdapterInfo;
+}
+declare const Platform: PlatformInstance;
 
 declare const URLOpenError: ErrorConstructor;
 
@@ -602,70 +673,6 @@ interface ContactsManager {
 }
 declare const Open: OpenInstance;
 
-declare global {
-    interface Navigator {
-        userAgent?: string;
-        userAgentData?: UserAgentData;
-        language?: string;
-        languages?: readonly string[];
-        browserLanguage?: string;
-        systemLanguage?: string;
-        userLanguage?: string;
-        standalone?: boolean;
-        gpu?: WebGPU;
-    }
-    interface NodeProcessVersions {
-        node?: string;
-        chrome?: string;
-    }
-    interface NodeProcess {
-        versions?: NodeProcessVersions;
-        type?: string;
-        platform?: string;
-        getSystemVersion?(): string;
-    }
-    var process: NodeProcess | undefined;
-    namespace Intl {
-        const Locale: {
-            new (tag: string): IntlLocale;
-        };
-    }
-}
-interface IntlLocale {
-    getTextInfo?(): IntlLocaleTextInfo;
-    textInfo: IntlLocaleTextInfo;
-}
-interface IntlLocaleTextInfo {
-    direction: 'rtl' | 'ltr';
-}
-interface ModernUserAgentDataBrand {
-    brand: string;
-    version: string;
-}
-type UserAgentDataBrand = ModernUserAgentDataBrand | string | null | undefined;
-interface UserAgentDataValues {
-    brands?: UserAgentDataBrand[];
-    fullVersionList?: UserAgentDataBrand[];
-    platformVersion?: string | null | undefined;
-    platform?: string | null | undefined;
-    mobile?: boolean;
-}
-interface UserAgentData {
-    getHighEntropyValues?(hints: string[]): Promise<UserAgentDataValues>;
-}
-interface WebGPU {
-    requestAdapter(options?: GPURequestAdapterOptions): Promise<GPUAdapter | null>;
-}
-interface GPURequestAdapterOptions {
-    powerPreference?: GPUPowerPreference;
-    forceFallbackAdapter?: boolean;
-}
-type GPUPowerPreference = 'low-power' | 'high-performance';
-interface GPUAdapter {
-    readonly info: GPUAdapterInfo;
-}
-declare const Platform: PlatformInstance;
-
 declare interface ThemeInstance {
     get value(): string | undefined;
     set value(color: string | undefined);
@@ -676,9 +683,9 @@ declare interface ThemeInstance {
 declare const Theme: ThemeInstance;
 
 declare interface VibrationInstance {
+    get supported(): boolean;
     run(pattern: number | number[]): boolean;
     stop(): boolean;
-    get supported(): boolean;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;
@@ -711,6 +718,7 @@ declare enum PermissionState {
 }
 
 declare interface PermissionInstance {
+    get supported(): boolean;
     request(type: PermissionType): Promise<PermissionState>;
     check(type: PermissionType): Promise<PermissionState>;
     Constants: {
@@ -723,30 +731,35 @@ declare interface PermissionInstance {
 declare const Permission: PermissionInstance;
 
 declare interface PipInstance {
-    supported: boolean;
-    element: HTMLVideoElement | null;
-    isPip: boolean;
+    get supported(): boolean;
+    get element(): HTMLVideoElement | null;
+    get isPip(): boolean;
     request(target?: HTMLVideoElement): Promise<void>;
     exit(): Promise<void>;
-    toggle(target?: HTMLVideoElement): Promise<void>;
-    onChange(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void;
-    onError(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void;
+    onChange(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
+    onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;
+        InvalidStateError: typeof InvalidStateError;
     };
+}
+declare interface PipEventPayload {
+    nativeEvent: Event;
+    element: HTMLVideoElement;
+    isPip: boolean;
 }
 
 declare global {
     interface HTMLVideoElement {
-        webkitSupportsPresentationMode?: (mode: string) => boolean;
-        webkitSetPresentationMode?: (mode: string) => void;
+        webkitSupportsPresentationMode?(mode: string): boolean;
+        webkitSetPresentationMode?(mode: string): void;
         webkitPresentationMode?: string;
-        onwebkitpresentationmodechanged?: ((this: HTMLVideoElement, ev: Event) => any) | null;
-        [key: symbol]: boolean | undefined;
+        onwebkitpresentationmodechanged?: ((this: Element, ev: Event) => any) | null;
     }
+    var __nativeFnPipBridgeKey__: symbol | undefined;
 }
-declare const _default: PipInstance;
+declare const Pip: PipInstance;
 
 declare interface NativeInstance {
     version: string;
@@ -755,13 +768,13 @@ declare interface NativeInstance {
     battery: typeof Battery;
     clipboard: typeof Clipboard;
     dimension: typeof Dimension;
-    fullscreen: typeof _default$1;
+    fullscreen: typeof Fullscreen;
     geolocation: typeof Geolocation;
     notification: typeof Notification$1;
     open: typeof Open;
     permission: typeof Permission;
     platform: typeof Platform;
-    pip: typeof _default;
+    pip: typeof Pip;
     theme: typeof Theme;
     vibration: typeof Vibration;
 }

@@ -20,9 +20,9 @@ export interface BatteryManager extends EventTarget {
 }
 
 export declare interface BatteryInstance {
-    get value(): Promise<BatteryManager>;
-
     get supported(): boolean;
+
+    get value(): Promise<BatteryManager>;
 
     onChange(listener: (battery: BatteryManager) => void, options?: AddEventListenerOptions): () => void;
 

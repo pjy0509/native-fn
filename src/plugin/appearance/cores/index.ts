@@ -1,7 +1,7 @@
 import {Appearances, CONTEXT, MEDIA_QUERY_LIST, SVG_PIXEL_DATA_URL} from "../constants";
 import {AppearanceInstance} from "../types";
 import Platform from "../../platform/cores";
-import {Browsers} from "../../platform/constants";
+import {Browsers} from "../../platform";
 import EventListener from "../../../utils/event-listener";
 import {SubscriptionManager} from "../../../types/subscription-manager";
 import createSubscriptionManager from "../../../utils/create-subscription-manager";

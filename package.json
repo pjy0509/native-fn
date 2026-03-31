@@ -1,7 +1,8 @@
 {
   "name": "native-fn",
-  "version": "1.1.9",
-  "description": " ",
+  "version": "1.2.0",
+  "description": "TypeScript library bridging Web APIs to native device capabilities — Picture-in-Picture, Fullscreen, Clipboard, Geolocation, Battery, Notifications, Vibration, Platform detection, and more.",
+  "author": "Park Jungyoung <qkrwnss0509@gmail.com> (https://github.com/pjy0509)",
   "type": "module",
 
   "main": "dist/native.cjs",
@@ -133,7 +134,6 @@
     "build": "rollup -c"
   },
 
-  "author": "pjy",
   "license": "MIT",
 
   "repository": {
@@ -142,17 +142,25 @@
   },
   "homepage": "https://pjy0509.github.io/example/native-fn/",
   "keywords": [
-    "app",
-    "app loader",
-    "app launcher",
-    "app-loader",
-    "app-launcher",
+    "native-fn",
+    "picture-in-picture",
+    "pip",
+    "fullscreen",
+    "clipboard",
+    "geolocation",
+    "battery",
+    "notification",
+    "vibration",
+    "app-badge",
+    "safe-area-inset",
+    "deep-link",
+    "file-picker",
+    "share-api",
+    "browser-detection",
+    "webview",
+    "pwa",
+    "os-detection",
     "appearance",
-    "engine",
-    "messenger",
-    "os",
-    "theme",
-    "theme color",
     "theme-color"
   ],
   "devDependencies": {

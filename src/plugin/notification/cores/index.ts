@@ -1,7 +1,7 @@
 import {NotificationInstance, NotificationOptions} from "../types";
 import {NotSupportedError} from "../../../errors/not-supported-error";
 import Permission from "../../permission";
-import {PermissionState, PermissionType} from "../../permission/constants";
+import {PermissionState, PermissionType} from "../../permission";
 import {PermissionNotGrantedError} from "../../../errors/permission-not-granted-error";
 
 const Notification: NotificationInstance = {

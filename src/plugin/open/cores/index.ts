@@ -21,7 +21,7 @@ import {
     URLStringOrFallback,
     WindowsAppInfo
 } from "../types";
-import {Browsers, OS} from "../../platform/constants";
+import {Browsers, OS} from "../../platform";
 import Platform from "../../platform/cores";
 import EventListener from "../../../utils/event-listener";
 import compareVersion from "../../../utils/compare-version";
@@ -34,7 +34,6 @@ import padStart from "../../../utils/pad-start";
 import {URLOpenError} from "../errors/url-open-error";
 import {UserCancelledError} from "../errors/user-cancel-error";
 import {NotSupportedError} from "../../../errors/not-supported-error";
-import Native from "../../../../index";
 
 declare global {
     interface Document {

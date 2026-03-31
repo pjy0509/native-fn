@@ -23,6 +23,7 @@ declare enum PermissionState {
 declare const GET_USER_MEDIA: ((constraints?: MediaStreamConstraints) => Promise<MediaStream>) | undefined;
 
 declare interface PermissionInstance {
+    get supported(): boolean;
     request(type: PermissionType): Promise<PermissionState>;
     check(type: PermissionType): Promise<PermissionState>;
     Constants: {

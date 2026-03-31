@@ -1,30 +1,37 @@
 declare const NotSupportedError: ErrorConstructor;
 
+declare const InvalidStateError: ErrorConstructor;
+
 declare interface PipInstance {
-    supported: boolean;
-    element: HTMLVideoElement | null;
-    isPip: boolean;
+    get supported(): boolean;
+    get element(): HTMLVideoElement | null;
+    get isPip(): boolean;
     request(target?: HTMLVideoElement): Promise<void>;
     exit(): Promise<void>;
-    toggle(target?: HTMLVideoElement): Promise<void>;
-    onChange(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void;
-    onError(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void;
+    onChange(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
+    onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;
+        InvalidStateError: typeof InvalidStateError;
     };
+}
+declare interface PipEventPayload {
+    nativeEvent: Event;
+    element: HTMLVideoElement;
+    isPip: boolean;
 }
 
 declare global {
     interface HTMLVideoElement {
-        webkitSupportsPresentationMode?: (mode: string) => boolean;
-        webkitSetPresentationMode?: (mode: string) => void;
+        webkitSupportsPresentationMode?(mode: string): boolean;
+        webkitSetPresentationMode?(mode: string): void;
         webkitPresentationMode?: string;
-        onwebkitpresentationmodechanged?: ((this: HTMLVideoElement, ev: Event) => any) | null;
-        [key: symbol]: boolean | undefined;
+        onwebkitpresentationmodechanged?: ((this: Element, ev: Event) => any) | null;
     }
+    var __nativeFnPipBridgeKey__: symbol | undefined;
 }
-declare const _default: PipInstance;
+declare const Pip: PipInstance;
 
-export { _default as default };
-export type { PipInstance };
+export { Pip as default };
+export type { PipEventPayload, PipInstance };

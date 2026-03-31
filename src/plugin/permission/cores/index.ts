@@ -2,6 +2,9 @@ import {PermissionInstance} from "../types";
 import {GET_USER_MEDIA, PermissionState, PermissionType} from "../constants";
 
 const Permission: PermissionInstance = {
+    get supported(): boolean {
+        return supported();
+    },
     request: request,
     check: check,
     Constants: {
@@ -10,6 +13,10 @@ const Permission: PermissionInstance = {
     },
     Errors: {},
 };
+
+function supported(): boolean {
+    return typeof globalThis.navigator.permissions !== 'undefined';
+}
 
 function request(this: PermissionInstance, type: PermissionType): Promise<PermissionState> {
     const instance: PermissionInstance = this;

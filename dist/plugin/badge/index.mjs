@@ -83,11 +83,11 @@ function createCustomError(name, Base) {
 var NotSupportedError = createCustomError('NotSupportedError');
 
 var Badge = {
-    set: set,
-    clear: clear,
     get supported() {
         return supported();
     },
+    set: set,
+    clear: clear,
     Constants: {},
     Errors: {
         NotSupportedError: NotSupportedError,

@@ -85,16 +85,19 @@ function createCustomError(name, Base) {
 var NotSupportedError = createCustomError('NotSupportedError');
 
 var Vibration = {
-    run: run,
-    stop: stop,
     get supported() {
         return supported();
     },
+    run: run,
+    stop: stop,
     Constants: {},
     Errors: {
         NotSupportedError: NotSupportedError,
     },
 };
+function supported() {
+    return typeof globalThis.navigator.vibrate !== 'undefined';
+}
 function run(pattern) {
     if (supported())
         return globalThis.navigator.vibrate(pattern);
@@ -102,9 +105,6 @@ function run(pattern) {
 }
 function stop() {
     return this.run(0);
-}
-function supported() {
-    return typeof globalThis.navigator.vibrate !== 'undefined';
 }
 
 module.exports = Vibration;

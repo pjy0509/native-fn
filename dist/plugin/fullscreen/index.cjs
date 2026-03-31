@@ -102,6 +102,7 @@ var HIGH_ENTROPY_BRAND_NAME_MAP = {
     'HeadlessChrome': 'Chrome Headless',
     'OperaMobile': 'Opera Mobi',
 };
+var RTL_LANGUAGES = ['ae', 'ar', 'arc', 'bcc', 'bqi', 'ckb', 'dv', 'fa', 'glk', 'he', 'iw', 'ku', 'mzn', 'nqo', 'pnb', 'ps', 'sd', 'ug', 'ur', 'yi'];
 var OS_RESOLVER_MAP = [
     [/windows nt (6\.[23]); arm/i, OS.Windows, resolveWindowsVersion],
     [/windows (?:phone|mobile|iot)(?: os)?[\/ ]?([\d.]*( se)?)/i, OS.Windows, resolveWindowsVersion],
@@ -373,6 +374,9 @@ var parsedFromHighEntropyValuesOS = {};
 var parsedFromHighEntropyValuesBrowser = {};
 var parsedFromHighEntropyValuesEngine = {};
 var parsedFromHighEntropyValuesDevice = null;
+var parsedFromNavigatorGPU = {};
+var cachedLocale = null;
+var ready;
 function resolveVersion(string, resolver) {
     if (typeof resolver === 'function')
         return resolver(string);
@@ -388,6 +392,38 @@ function normalizeBrand(entry) {
     if (typeof entry === 'string')
         return { brand: entry, version: '' };
     return { brand: entry.brand, version: entry.version };
+}
+function normalizeLocale(locale) {
+    if (locale === null || typeof locale === 'undefined')
+        return locale;
+    if (locale.length === 0)
+        return null;
+    locale = locale.replace(/_/g, '-');
+    if (locale === 'C' || locale.toLowerCase() === 'posix')
+        return 'en-US';
+    if (locale.indexOf('.') !== -1)
+        return normalizeLocale(locale.split('.')[0]);
+    if (locale.indexOf('@') !== -1)
+        return normalizeLocale(locale.split('@')[0]);
+    var parts = locale.split('-');
+    if (parts.length === 0)
+        return null;
+    parts[0] = parts[0].toLowerCase();
+    if (parts.length > 1 && parts[1].length === 2)
+        parts[1] = parts[1].toUpperCase();
+    if (parts.length > 2 && parts[1].length === 4) {
+        parts[1] = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
+    }
+    return parts.join('-');
+}
+function invalidateCache() {
+    parsedCache = null;
+    cachedLocale = null;
+    parsedFromHighEntropyValuesOS = {};
+    parsedFromHighEntropyValuesBrowser = {};
+    parsedFromHighEntropyValuesEngine = {};
+    parsedFromHighEntropyValuesDevice = null;
+    parsedFromNavigatorGPU = {};
 }
 function getParsedCache() {
     if (parsedCache !== null && parsedCache.userAgent === currentUserAgent)
@@ -467,6 +503,120 @@ function parseEngine() {
     }
     return result;
 }
+function getGPU() {
+    return {
+        architecture: parsedFromNavigatorGPU.architecture,
+        description: parsedFromNavigatorGPU.description,
+        device: parsedFromNavigatorGPU.device,
+        vendor: parsedFromNavigatorGPU.vendor,
+    };
+}
+function getLocale() {
+    if (cachedLocale !== null)
+        return cachedLocale;
+    var locale = {
+        language: null,
+        languages: [],
+        timezone: null,
+        offset: 0,
+        isRTL: false,
+    };
+    var isRTL = null;
+    function addLanguages(language) {
+        for (var i = 0; i < language.length; i++)
+            addLanguage(language[i]);
+    }
+    function addLanguage(language) {
+        language = normalizeLocale(language);
+        if (typeof language === 'string' && locale.languages.indexOf(language) === -1) {
+            if (locale.language === null)
+                locale.language = language;
+            locale.languages.push(language);
+        }
+    }
+    if (typeof Intl !== 'undefined') {
+        try {
+            addLanguage(Intl.DateTimeFormat().resolvedOptions().locale);
+        }
+        catch (_) {
+        }
+        try {
+            locale.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        }
+        catch (_) {
+        }
+    }
+    if (typeof globalThis.navigator !== 'undefined') {
+        if (typeof globalThis.navigator.languages !== 'undefined')
+            addLanguages(globalThis.navigator.languages);
+        if (typeof globalThis.navigator.language !== 'undefined')
+            addLanguage(globalThis.navigator.language);
+        if (typeof globalThis.navigator.userLanguage !== 'undefined')
+            addLanguage(globalThis.navigator.userLanguage);
+        if (typeof globalThis.navigator.browserLanguage !== 'undefined')
+            addLanguage(globalThis.navigator.browserLanguage);
+        if (typeof globalThis.navigator.systemLanguage !== 'undefined')
+            addLanguage(globalThis.navigator.systemLanguage);
+    }
+    try {
+        locale.offset = new Date().getTimezoneOffset() * -1;
+    }
+    catch (_) {
+    }
+    if (typeof locale.language === 'string') {
+        if (typeof Intl !== 'undefined' && typeof Intl.Locale !== 'undefined') {
+            try {
+                var intlLocale = new Intl.Locale(locale.language);
+                if (typeof intlLocale.getTextInfo === 'function')
+                    isRTL = intlLocale.getTextInfo().direction === 'rtl';
+                else if (typeof intlLocale.textInfo !== 'undefined')
+                    isRTL = intlLocale.textInfo.direction === 'rtl';
+            }
+            catch (_) {
+            }
+        }
+        if (typeof isRTL !== 'boolean') {
+            var matched = /^([A-Za-z]{1,8})(?:[-_][A-Za-z0-9]{1,8})*$/.exec(locale.language);
+            if (matched !== null) {
+                var language = matched[1].toLowerCase();
+                for (var i = 0; i < RTL_LANGUAGES.length; i++) {
+                    if (RTL_LANGUAGES[i] === language) {
+                        isRTL = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if (typeof isRTL === 'boolean')
+        locale.isRTL = isRTL;
+    cachedLocale = locale;
+    return cachedLocale;
+}
+function getDevice() {
+    if (currentUserAgent === USER_AGENT && parsedFromHighEntropyValuesDevice !== null)
+        return parsedFromHighEntropyValuesDevice;
+    var osName = getParsedCache().os.name;
+    if (osName === OS.iOS || osName === OS.Android)
+        return Devices.Mobile;
+    if (osName === OS.Windows || osName === OS.MacOS)
+        return Devices.Desktop;
+    return Devices.Unknown;
+}
+function getIsWebview() {
+    return /; ?wv|applewebkit(?!.*safari)/i.test(currentUserAgent);
+}
+function getIsNode() {
+    return typeof globalThis.process !== 'undefined' && typeof globalThis.process.versions !== 'undefined' && typeof globalThis.process.versions.node !== 'undefined';
+}
+function getIsStandalone() {
+    var osName = getParsedCache().os.name;
+    if (osName === OS.iOS)
+        return globalThis.navigator.standalone === true;
+    if (typeof globalThis.matchMedia === 'undefined')
+        return false;
+    return globalThis.matchMedia('(display-mode: standalone)').matches;
+}
 function parseFromHighEntropyValues() {
     if (typeof globalThis.navigator === 'undefined' || typeof globalThis.navigator.userAgentData === 'undefined' || typeof globalThis.navigator.userAgentData.getHighEntropyValues === 'undefined')
         return Promise.resolve();
@@ -537,28 +687,80 @@ function parseFromNavigatorGPU() {
         .then(function (adapter) {
         if (adapter !== null) {
             var info = adapter.info;
-            info.architecture;
-            info.description;
-            info.device;
-            info.vendor;
+            parsedFromNavigatorGPU.architecture = info.architecture;
+            parsedFromNavigatorGPU.description = info.description;
+            parsedFromNavigatorGPU.device = info.device;
+            parsedFromNavigatorGPU.vendor = info.vendor;
         }
     })
         .catch(function () {
     });
 }
-Promise.all([
+ready = Promise.all([
     parseFromHighEntropyValues(),
     parseFromNavigatorGPU(),
 ]).then(function () {
 });
 EventListener.add(globalThis, {
     type: 'languagechange', callback: function () {
+        cachedLocale = null;
     }
 });
 var Platform = {
+    get ready() {
+        return ready;
+    },
     get os() {
         return getParsedCache().os;
-    }};
+    },
+    get engine() {
+        return getParsedCache().engine;
+    },
+    get browser() {
+        return getParsedCache().browser;
+    },
+    get userAgent() {
+        return currentUserAgent;
+    },
+    set userAgent(value) {
+        if (currentUserAgent === value)
+            return;
+        currentUserAgent = value;
+        invalidateCache();
+        if (value === USER_AGENT) {
+            ready = Promise.all([
+                parseFromHighEntropyValues(),
+                parseFromNavigatorGPU(),
+            ]).then(function () {
+            });
+        }
+    },
+    get locale() {
+        return getLocale();
+    },
+    get device() {
+        return getDevice();
+    },
+    get gpu() {
+        return getGPU();
+    },
+    get isWebview() {
+        return getIsWebview();
+    },
+    get isNode() {
+        return getIsNode();
+    },
+    get isStandalone() {
+        return getIsStandalone();
+    },
+    Constants: {
+        OS: OS,
+        Engines: Engines,
+        Browsers: Browsers,
+        Devices: Devices,
+    },
+    Errors: {},
+};
 
 function createSubscriptionManager(attach, detach) {
     var entries = [];
@@ -702,7 +904,19 @@ function createCustomError(name, Base) {
 
 var NotSupportedError = createCustomError('NotSupportedError');
 
-var FS_BRIDGED_KEY = Symbol('fsBridged');
+var InvalidStateError = createCustomError('InvalidStateError');
+
+var lastIOSVideo = null;
+var eventsBridged = false;
+var FS_BRIDGE_KEY = (function () {
+    if (typeof Symbol === 'function') {
+        var existing = globalThis.__nativeFnFsBridgeKey__;
+        if (typeof existing === 'symbol')
+            return existing;
+        return globalThis.__nativeFnFsBridgeKey__ = Symbol('native.fn.fs.bridged');
+    }
+    return '__nativeFnFsBridged__';
+}());
 var API_VARIANTS = {
     standard: {
         enabled: 'fullscreenEnabled',
@@ -734,6 +948,31 @@ var API_VARIANTS = {
     },
 };
 var api = detectApi();
+var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
+var onErrorSubscriptionManager = createSubscriptionManager(attachOnError, detachOnError);
+var Fullscreen = {
+    get supported() {
+        return getEnabled();
+    },
+    get element() {
+        return getElement();
+    },
+    get isFullscreen() {
+        return getIsFullscreen();
+    },
+    request: request,
+    exit: exit,
+    onChange: onChangeSubscriptionManager.subscribe,
+    onError: onErrorSubscriptionManager.subscribe,
+    Constants: {},
+    Errors: {
+        NotSupportedError: NotSupportedError,
+        InvalidStateError: InvalidStateError,
+    },
+};
+function hasStandardApi() {
+    return api !== null;
+}
 function detectApi() {
     var element = globalThis.document.documentElement;
     if (typeof globalThis.document.fullscreenEnabled !== 'undefined' || typeof globalThis.document.exitFullscreen !== 'undefined')
@@ -750,286 +989,281 @@ function detectApi() {
     }
     return null;
 }
-function createFullscreen() {
-    var lastIOSVideo = null;
-    var eventsBridged = false;
-    var activeOperation = null;
-    var pendingQueue = [];
-    var lastIntendedOperation = 'exit';
-    var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
-    var onErrorSubscriptionManager = createSubscriptionManager(attachOnError, detachOnError);
-    function getDefaultTarget() {
-        if (Platform.os.name === OS.iOS) {
-            var video = globalThis.document.querySelector('video');
-            if (video === null)
-                return undefined;
-            return video;
-        }
-        return globalThis.document.documentElement;
+function getDefaultTarget() {
+    if (Platform.os.name === OS.iOS) {
+        var video = globalThis.document.querySelector('video');
+        return video !== null ? video : undefined;
     }
-    function bridgeEvents() {
-        if (eventsBridged)
-            return;
-        eventsBridged = true;
-        if (Platform.os.name === OS.iOS) {
-            bridgeIOSVideoEvents();
-            if (typeof globalThis.MutationObserver !== 'undefined') {
-                var observer = new MutationObserver(function () {
-                    bridgeIOSVideoEvents();
-                });
-                observer.observe(globalThis.document.documentElement, {
-                    childList: true,
-                    subtree: true,
-                });
-            }
-        }
-    }
-    function bridgeIOSVideoEvents() {
-        if (typeof globalThis.document === 'undefined')
-            return;
-        var videos = globalThis.document.querySelectorAll('video');
-        videos.forEach(function (video) {
-            if (video[FS_BRIDGED_KEY] === true || !(typeof video.webkitEnterFullscreen !== 'undefined' || typeof video.onwebkitbeginfullscreen !== 'undefined'))
-                return;
-            EventListener.add(video, {
-                type: 'webkitbeginfullscreen',
-                callback: onChangeSubscriptionManager.emit,
-                options: false,
-            });
-            EventListener.add(video, {
-                type: 'webkitendfullscreen',
-                callback: onChangeSubscriptionManager.emit,
-                options: false,
-            });
-            video[FS_BRIDGED_KEY] = true;
-        });
-    }
-    function attachOnChange() {
-        var events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
-        for (var i = 0; i < events.length; i++) {
-            EventListener.add(globalThis.document, {
-                type: events[i],
-                callback: onChangeSubscriptionManager.emit,
-                options: false,
-            });
-        }
-    }
-    function detachOnChange() {
-        var events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
-        for (var i = 0; i < events.length; i++) {
-            EventListener.remove(globalThis.document, {
-                type: events[i],
-                callback: onChangeSubscriptionManager.emit,
-                options: false,
-            });
-        }
-    }
-    function attachOnError() {
-        var events = ['fullscreenerror', 'webkitfullscreenerror', 'mozfullscreenerror', 'MSFullscreenError'];
-        for (var i = 0; i < events.length; i++) {
-            EventListener.add(globalThis.document, {
-                type: events[i],
-                callback: onErrorSubscriptionManager.emit,
-                options: false,
-            });
-        }
-    }
-    function detachOnError() {
-        var events = ['fullscreenerror', 'webkitfullscreenerror', 'mozfullscreenerror', 'MSFullscreenError'];
-        for (var i = 0; i < events.length; i++) {
-            EventListener.remove(globalThis.document, {
-                type: events[i],
-                callback: onErrorSubscriptionManager.emit,
-                options: false,
-            });
-        }
-    }
-    function getEnabled() {
-        if (api === null)
-            return (Platform.os.name === OS.iOS && globalThis.HTMLVideoElement.prototype.webkitSupportsFullscreen === true);
+    return globalThis.document.documentElement;
+}
+function getEnabled() {
+    if (api !== null)
         return globalThis.document[api.enabled] === true;
-    }
-    function getElement() {
-        if (api === null) {
-            if (lastIOSVideo !== null && lastIOSVideo.webkitDisplayingFullscreen === true)
-                return lastIOSVideo;
-            return null;
-        }
-        var currentElement = globalThis.document[api.element];
-        if (typeof currentElement !== 'undefined')
-            return currentElement;
+    if (Platform.os.name !== OS.iOS)
+        return false;
+    var video;
+    var selected = globalThis.document.querySelector('video');
+    if (selected !== null)
+        video = selected;
+    else
+        video = globalThis.document.createElement('video');
+    return video.webkitSupportsFullscreen === true || typeof video.webkitEnterFullscreen === 'function';
+}
+function getElement() {
+    if (api === null) {
+        if (lastIOSVideo !== null && lastIOSVideo.webkitDisplayingFullscreen === true)
+            return lastIOSVideo;
         return null;
     }
-    function getIsFullscreen() {
-        return getElement() !== null;
-    }
-    function drainPendingOperation() {
-        var entry = pendingQueue.shift();
-        if (typeof entry === 'undefined') {
-            activeOperation = null;
-            return;
-        }
-        var next;
-        if (entry.operation === 'request')
-            next = requestImmediately(entry.target, entry.options);
-        else
-            next = exitImmediately();
-        activeOperation = next
-            .then(function () {
-            entry.resolve();
-            drainPendingOperation();
-        })
-            .catch(function (error) {
-            entry.reject(error);
-            drainPendingOperation();
-        });
-    }
-    function request(target, options) {
-        lastIntendedOperation = 'request';
-        if (activeOperation === null) {
-            var next = requestImmediately(target, options);
-            activeOperation = next
-                .then(drainPendingOperation)
-                .catch(drainPendingOperation);
-            return next;
-        }
-        return new Promise(function (resolve, reject) {
-            pendingQueue.push({
-                operation: 'request',
-                target: target,
-                options: options,
-                resolve: resolve,
-                reject: reject,
-            });
-        });
-    }
-    function exit() {
-        lastIntendedOperation = 'exit';
-        if (activeOperation === null) {
-            var next = exitImmediately();
-            activeOperation = next
-                .then(drainPendingOperation)
-                .catch(drainPendingOperation);
-            return next;
-        }
-        return new Promise(function (resolve, reject) {
-            pendingQueue.push({
-                operation: 'exit',
-                target: undefined,
-                options: undefined,
-                resolve: resolve,
-                reject: reject,
-            });
-        });
-    }
-    function requestImmediately(target, options) {
-        return new Promise(function (resolve, reject) {
-            if (typeof target === 'undefined')
-                target = getDefaultTarget();
-            if (typeof target === 'undefined')
-                return reject(new NotSupportedError('Failed to enter fullscreen mode.'));
-            var tagName = target.tagName.toLowerCase();
-            function fallbackToIOSVideo() {
-                if (Platform.os.name === OS.iOS && typeof target !== 'undefined' && target.tagName.toUpperCase() === 'VIDEO') {
-                    var video = target;
-                    if (video.webkitSupportsFullscreen === true && typeof video.webkitEnterFullscreen === 'function') {
-                        lastIOSVideo = video;
-                        bridgeIOSVideoEvents();
-                        video.webkitEnterFullscreen();
-                        return resolve();
+    var currentElement = globalThis.document[api.element];
+    if (typeof currentElement !== 'undefined')
+        return currentElement;
+    return null;
+}
+function getIsFullscreen() {
+    return getElement() !== null;
+}
+function createEventPayload(nativeEvent, element, isFullscreen) {
+    return {
+        nativeEvent: nativeEvent,
+        element: element,
+        isFullscreen: isFullscreen,
+    };
+}
+function emitChange(nativeEvent, element, isFullscreen) {
+    onChangeSubscriptionManager.emit(createEventPayload(nativeEvent, element, isFullscreen));
+}
+function emitError(nativeEvent, element, isFullscreen) {
+    onErrorSubscriptionManager.emit(createEventPayload(nativeEvent, element, isFullscreen));
+}
+function onFullscreenChange(event) {
+    var target = event.target;
+    if (target instanceof globalThis.Element)
+        emitChange(event, target, getIsFullscreen());
+    if (target instanceof globalThis.Document)
+        emitChange(event, globalThis.document.documentElement, getIsFullscreen());
+}
+function onFullscreenError(event) {
+    var target = event.target;
+    if (target instanceof globalThis.Element)
+        emitError(event, target, getIsFullscreen());
+    if (target instanceof globalThis.Document)
+        emitError(event, globalThis.document.documentElement, getIsFullscreen());
+}
+function onIOSBeginFullscreen(event) {
+    lastIOSVideo = this;
+    emitChange(event, this, true);
+}
+function onIOSEndFullscreen(event) {
+    if (lastIOSVideo === this)
+        lastIOSVideo = null;
+    emitChange(event, this, false);
+}
+function bridgeSingleVideoNode(video) {
+    if (video[FS_BRIDGE_KEY])
+        return;
+    if (typeof video.webkitEnterFullscreen === 'undefined' && typeof video.onwebkitbeginfullscreen === 'undefined')
+        return;
+    EventListener.add(video, { type: 'webkitbeginfullscreen', callback: onIOSBeginFullscreen, options: false });
+    EventListener.add(video, { type: 'webkitendfullscreen', callback: onIOSEndFullscreen, options: false });
+    video[FS_BRIDGE_KEY] = true;
+}
+function bridgeIOSVideoEvents() {
+    var videos = globalThis.document.querySelectorAll('video');
+    for (var i = 0; i < videos.length; i++)
+        bridgeSingleVideoNode(videos[i]);
+}
+function bridgeEvents() {
+    if (eventsBridged)
+        return;
+    eventsBridged = true;
+    if (Platform.os.name !== OS.iOS)
+        return;
+    bridgeIOSVideoEvents();
+    if (typeof globalThis.MutationObserver === 'undefined')
+        return;
+    var observer = new globalThis.MutationObserver(function (records) {
+        if (lastIOSVideo !== null) {
+            var removed = false;
+            for (var i = 0; i < records.length; i++) {
+                var removedNodes = records[i].removedNodes;
+                for (var j = 0; j < removedNodes.length; j++) {
+                    var node = removedNodes[j];
+                    if (node === lastIOSVideo || (node.nodeType === Node.ELEMENT_NODE && node.contains(lastIOSVideo))) {
+                        removed = true;
+                        break;
                     }
                 }
-                reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
+                if (removed)
+                    break;
             }
-            if (api !== null) {
-                var method = target[api.request];
-                if (typeof method === 'function') {
-                    var result = method.call(target, options);
-                    if (typeof result !== 'undefined' && typeof result.then === 'function') {
-                        result
-                            .then(resolve)
-                            .catch(function () {
+            if (removed && !globalThis.document.contains(lastIOSVideo))
+                lastIOSVideo = null;
+        }
+        for (var i = 0; i < records.length; i++) {
+            var addedNodes = records[i].addedNodes;
+            for (var j = 0; j < addedNodes.length; j++) {
+                var node = addedNodes[j];
+                if (node.nodeType !== Node.ELEMENT_NODE)
+                    continue;
+                var element = node;
+                if (element.tagName === 'VIDEO') {
+                    bridgeSingleVideoNode(element);
+                    continue;
+                }
+                var nested = element.querySelectorAll('video');
+                for (var k = 0; k < nested.length; k++)
+                    bridgeSingleVideoNode(nested[k]);
+            }
+        }
+    });
+    observer.observe(globalThis.document.documentElement, { childList: true, subtree: true });
+}
+function attachOnChange() {
+    if (api != null)
+        EventListener.add(globalThis.document, { type: api.events.change, callback: onFullscreenChange, options: false });
+    if (Platform.os.name === OS.iOS)
+        bridgeIOSVideoEvents();
+}
+function detachOnChange() {
+    if (api != null)
+        EventListener.remove(globalThis.document, { type: api.events.change, callback: onFullscreenChange, options: false });
+    if (Platform.os.name !== OS.iOS)
+        return;
+    var videos = globalThis.document.querySelectorAll('video');
+    for (var i = 0; i < videos.length; i++) {
+        EventListener.remove(videos[i], { type: 'webkitbeginfullscreen', callback: onIOSBeginFullscreen, options: false });
+        EventListener.remove(videos[i], { type: 'webkitendfullscreen', callback: onIOSEndFullscreen, options: false });
+        videos[i][FS_BRIDGE_KEY] = false;
+    }
+}
+function attachOnError() {
+    if (api != null)
+        EventListener.add(globalThis.document, { type: api.events.error, callback: onFullscreenError, options: false });
+}
+function detachOnError() {
+    if (api != null)
+        EventListener.remove(globalThis.document, { type: api.events.error, callback: onFullscreenError, options: false });
+}
+function request(target, options) {
+    return new Promise(function (resolve, reject) {
+        if (typeof target === 'undefined')
+            target = getDefaultTarget();
+        if (typeof target === 'undefined')
+            return reject(new NotSupportedError('Failed to enter fullscreen mode.'));
+        var tagName = target.tagName.toLowerCase();
+        var isIOSFullscreenActive = lastIOSVideo !== null && lastIOSVideo.webkitDisplayingFullscreen === true;
+        if (api !== null) {
+            var method = target[api.request];
+            if (typeof method === 'function' && !isIOSFullscreenActive) {
+                var result = method.call(target, options);
+                if (typeof result !== 'undefined' && typeof result.then === 'function') {
+                    result
+                        .then(resolve)
+                        .catch(function () {
+                        try {
                             if (Platform.os.name !== OS.iOS)
                                 return reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
                             fallbackToIOSVideo();
+                        }
+                        catch (_e) {
+                            reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
+                        }
+                    });
+                    return;
+                }
+                return resolve();
+            }
+        }
+        function fallbackToIOSVideo() {
+            if (Platform.os.name === OS.iOS && typeof target !== 'undefined' && target.tagName.toUpperCase() === 'VIDEO') {
+                var video_1 = target;
+                if (video_1.webkitSupportsFullscreen && typeof video_1.webkitEnterFullscreen === 'function') {
+                    if (!hasStandardApi())
+                        bridgeSingleVideoNode(video_1);
+                    if (video_1.played.length === 0) {
+                        video_1.play()
+                            .then(function () {
+                            try {
+                                video_1.webkitEnterFullscreen();
+                            }
+                            catch (e) {
+                                return reject(new InvalidStateError('The object is in an invalid state.'));
+                            }
                         });
-                        return;
                     }
+                    else {
+                        try {
+                            video_1.webkitEnterFullscreen();
+                        }
+                        catch (e) {
+                            return reject(new InvalidStateError('The object is in an invalid state.'));
+                        }
+                    }
+                    lastIOSVideo = video_1;
                     return resolve();
                 }
             }
-            fallbackToIOSVideo();
-        });
-    }
-    function exitImmediately() {
-        return new Promise(function (resolve, reject) {
-            if (getElement() === null && lastIOSVideo === null)
-                return resolve();
-            function fallbackToIOSVideo() {
-                if (Platform.os.name === OS.iOS) {
-                    var candidates = void 0;
-                    if (lastIOSVideo !== null)
-                        candidates = [lastIOSVideo];
-                    else
-                        candidates = globalThis.document.querySelectorAll('video');
-                    for (var i = 0; i < candidates.length; i++) {
-                        var video = candidates[i];
-                        if (typeof video.webkitExitFullscreen === 'function' && video.webkitDisplayingFullscreen === true) {
-                            video.webkitExitFullscreen();
-                            lastIOSVideo = null;
-                            return resolve();
-                        }
-                    }
-                }
-                reject(new NotSupportedError('Failed to exit fullscreen mode.'));
-            }
-            if (api !== null) {
-                var method = globalThis.document[api.exit];
-                if (typeof method === 'function') {
-                    var result = method.call(globalThis.document);
-                    if (typeof result !== 'undefined' && typeof result.then === 'function') {
-                        result
-                            .then(resolve)
-                            .catch(function () {
+            reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
+        }
+        fallbackToIOSVideo();
+    });
+}
+function exit() {
+    return new Promise(function (resolve, reject) {
+        if (api !== null) {
+            var method = globalThis.document[api.exit];
+            if (typeof method === 'function') {
+                var result = method.call(globalThis.document);
+                if (typeof result !== 'undefined' && typeof result.then === 'function') {
+                    result
+                        .then(resolve)
+                        .catch(function () {
+                        try {
                             if (Platform.os.name !== OS.iOS)
                                 return reject(new NotSupportedError('Failed to exit fullscreen mode.'));
                             fallbackToIOSVideo();
-                        });
-                        return;
-                    }
+                        }
+                        catch (_e) {
+                            reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+                        }
+                    });
+                    return;
+                }
+                return resolve();
+            }
+        }
+        function fallbackToIOSVideo() {
+            if (Platform.os.name !== OS.iOS) {
+                reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+                return;
+            }
+            var target = lastIOSVideo;
+            if (target !== null && typeof target.webkitExitFullscreen === 'function' && target.webkitDisplayingFullscreen === true) {
+                target.webkitExitFullscreen();
+                if (target.webkitDisplayingFullscreen)
+                    return reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+                lastIOSVideo = null;
+                return resolve();
+            }
+            var videos = globalThis.document.querySelectorAll('video');
+            for (var i = 0; i < videos.length; i++) {
+                var video = videos[i];
+                if (typeof video.webkitExitFullscreen === 'function' && video.webkitDisplayingFullscreen === true) {
+                    video.webkitExitFullscreen();
+                    if (video.webkitDisplayingFullscreen)
+                        return reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+                    lastIOSVideo = null;
                     return resolve();
                 }
             }
-            fallbackToIOSVideo();
-        });
-    }
-    function toggle(target, options) {
-        if (lastIntendedOperation === 'request')
-            return exit();
-        return request(target, options);
-    }
-    bridgeEvents();
-    return {
-        get supported() {
-            return getEnabled();
-        },
-        get element() {
-            return getElement();
-        },
-        get isFullscreen() {
-            return getIsFullscreen();
-        },
-        request: request,
-        exit: exit,
-        toggle: toggle,
-        onChange: onChangeSubscriptionManager.subscribe,
-        onError: onErrorSubscriptionManager.subscribe,
-        Constants: {},
-        Errors: {
-            NotSupportedError: NotSupportedError,
-        },
-    };
+            if (getElement() === null)
+                return resolve();
+            reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+        }
+        fallbackToIOSVideo();
+    });
 }
-var Fullscreen = createFullscreen();
+bridgeEvents();
 
 module.exports = Fullscreen;

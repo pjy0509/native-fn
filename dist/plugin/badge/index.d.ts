@@ -1,9 +1,9 @@
 declare const NotSupportedError: ErrorConstructor;
 
 declare interface BadgeInstance {
+    get supported(): boolean;
     set(contents: number): Promise<void>;
     clear(): Promise<void>;
-    get supported(): boolean;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;

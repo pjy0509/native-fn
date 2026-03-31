@@ -348,301 +348,283 @@ function createCustomError(name, Base) {
 
 var NotSupportedError = createCustomError('NotSupportedError');
 
-var PIP_BRIDGED_KEY = Symbol('pipBridged');
+var InvalidStateError = createCustomError('InvalidStateError');
+
 var PIP_PRESENTATION_MODE = 'picture-in-picture';
 var INLINE_PRESENTATION_MODE = 'inline';
-function hasStandardPipEvents() {
+var lastPipVideo = null;
+var eventsBridged = false;
+var PIP_BRIDGE_KEY = (function () {
+    if (typeof Symbol === 'function') {
+        var existing = globalThis.__nativeFnPipBridgeKey__;
+        if (typeof existing === 'symbol')
+            return existing;
+        return globalThis.__nativeFnPipBridgeKey__ = Symbol('native.fn.pip.bridged');
+    }
+    return '__nativeFnPipBridged__';
+}());
+var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
+var onErrorSubscriptionManager = createSubscriptionManager(attachOnError, detachOnError);
+var Pip = {
+    get supported() {
+        return getEnabled();
+    },
+    get element() {
+        return getElement();
+    },
+    get isPip() {
+        return getIsPip();
+    },
+    request: request,
+    exit: exit,
+    onChange: onChangeSubscriptionManager.subscribe,
+    onError: onErrorSubscriptionManager.subscribe,
+    Constants: {},
+    Errors: {
+        NotSupportedError: NotSupportedError,
+        InvalidStateError: InvalidStateError,
+    },
+};
+function hasStandardApi() {
     return typeof globalThis.document.pictureInPictureEnabled !== 'undefined';
 }
-function createPip() {
-    var lastPipVideo = null;
-    var eventsBridged = false;
-    var activeOperation = null;
-    var pendingQueue = [];
-    var lastIntendedOperation = 'exit';
-    var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
-    var onErrorSubscriptionManager = createSubscriptionManager(attachOnError, detachOnError);
-    function getEnabled() {
-        if (typeof globalThis.document.pictureInPictureEnabled === 'boolean')
-            return globalThis.document.pictureInPictureEnabled;
-        if (typeof HTMLVideoElement === 'undefined')
-            return false;
-        var videos = globalThis.document.querySelectorAll('video');
-        for (var i = 0; i < videos.length; i++) {
-            var video = videos[i];
-            if (typeof video.webkitSupportsPresentationMode === 'function' && video.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE))
-                return true;
-        }
-        return false;
-    }
-    function getElement() {
-        var currentElement = globalThis.document.pictureInPictureElement;
-        if (currentElement !== null && typeof currentElement !== 'undefined')
-            return currentElement;
-        if (lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE)
-            return lastPipVideo;
-        return null;
-    }
-    function getIsPip() {
-        return getElement() !== null;
-    }
-    function getDefaultTarget() {
-        var video = globalThis.document.querySelector('video');
-        if (video === null)
-            return undefined;
-        return video;
-    }
-    function onWebkitPresentationModeChanged(event) {
-        if (this.webkitPresentationMode === PIP_PRESENTATION_MODE || (this.webkitPresentationMode === INLINE_PRESENTATION_MODE && lastPipVideo === this))
-            onChangeSubscriptionManager.emit(event);
-    }
-    function bridgeEvents() {
-        if (eventsBridged)
-            return;
-        eventsBridged = true;
-        if (!hasStandardPipEvents()) {
-            bridgeWebkitVideoEvents();
-            if (typeof globalThis.MutationObserver !== 'undefined') {
-                var observer = new MutationObserver(function () {
-                    bridgeWebkitVideoEvents();
-                });
-                observer.observe(globalThis.document.documentElement, {
-                    childList: true,
-                    subtree: true,
-                });
-            }
-        }
-    }
-    function bridgeWebkitVideoEvents() {
-        if (typeof globalThis.document === 'undefined')
-            return;
-        var videos = globalThis.document.querySelectorAll('video');
-        videos.forEach(function (video) {
-            if (video[PIP_BRIDGED_KEY] === true || !(typeof video.webkitSetPresentationMode !== 'undefined' || typeof video.onwebkitpresentationmodechanged !== 'undefined'))
-                return;
-            EventListener.add(video, {
-                type: 'webkitpresentationmodechanged',
-                callback: onWebkitPresentationModeChanged,
-                options: false,
-            });
-            video[PIP_BRIDGED_KEY] = true;
-        });
-    }
-    function attachOnChange() {
-        if (hasStandardPipEvents()) {
-            var changeEvents = ['enterpictureinpicture', 'leavepictureinpicture'];
-            for (var i = 0; i < changeEvents.length; i++) {
-                EventListener.add(globalThis.document, {
-                    type: changeEvents[i],
-                    callback: onChangeSubscriptionManager.emit,
-                    options: false,
-                });
-            }
-            return;
-        }
-        bridgeWebkitVideoEvents();
-    }
-    function detachOnChange() {
-        if (hasStandardPipEvents()) {
-            var changeEvents = ['enterpictureinpicture', 'leavepictureinpicture'];
-            for (var i = 0; i < changeEvents.length; i++) {
-                EventListener.remove(globalThis.document, {
-                    type: changeEvents[i],
-                    callback: onChangeSubscriptionManager.emit,
-                    options: false,
-                });
-            }
-            return;
-        }
-        var videos = globalThis.document.querySelectorAll('video');
-        videos.forEach(function (video) {
-            EventListener.remove(video, {
-                type: 'webkitpresentationmodechanged',
-                callback: onWebkitPresentationModeChanged,
-                options: false,
-            });
-            try {
-                delete video[PIP_BRIDGED_KEY];
-            }
-            catch (_) {
-                video[PIP_BRIDGED_KEY] = undefined;
-            }
-        });
-    }
-    function attachOnError() {
-        EventListener.add(globalThis.document, {
-            type: 'pictureinpictureerror',
-            callback: onErrorSubscriptionManager.emit,
-            options: false,
-        });
-    }
-    function detachOnError() {
-        EventListener.remove(globalThis.document, {
-            type: 'pictureinpictureerror',
-            callback: onErrorSubscriptionManager.emit,
-            options: false,
-        });
-    }
-    function drainPendingOperation() {
-        var entry = pendingQueue.shift();
-        if (typeof entry === 'undefined') {
-            activeOperation = null;
-            return;
-        }
-        var next;
-        if (entry.operation === 'request')
-            next = requestImmediately(entry.target);
-        else
-            next = exitImmediately();
-        activeOperation = next
-            .then(function () {
-            entry.resolve();
-            drainPendingOperation();
-        })
-            .catch(function (error) {
-            entry.reject(error);
-            drainPendingOperation();
-        });
-    }
-    function request(target) {
-        lastIntendedOperation = 'request';
-        if (activeOperation === null) {
-            var next = requestImmediately(target);
-            activeOperation = next
-                .then(drainPendingOperation)
-                .catch(drainPendingOperation);
-            return next;
-        }
-        return new Promise(function (resolve, reject) {
-            pendingQueue.push({
-                operation: 'request',
-                target: target,
-                resolve: resolve,
-                reject: reject,
-            });
-        });
-    }
-    function exit() {
-        lastIntendedOperation = 'exit';
-        if (activeOperation === null) {
-            var next = exitImmediately();
-            activeOperation = next
-                .then(drainPendingOperation)
-                .catch(drainPendingOperation);
-            return next;
-        }
-        return new Promise(function (resolve, reject) {
-            pendingQueue.push({
-                operation: 'exit',
-                target: undefined,
-                resolve: resolve,
-                reject: reject,
-            });
-        });
-    }
-    function requestImmediately(target) {
-        return new Promise(function (resolve, reject) {
-            if (typeof target === 'undefined')
-                target = getDefaultTarget();
-            if (typeof target === 'undefined')
-                return reject(new NotSupportedError('Failed to enter Picture-in-Picture mode.'));
-            var tagName = target.tagName.toLowerCase();
-            if (tagName !== 'video')
-                return reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
-            function fallbackToWebkitVideo() {
-                if (typeof target !== 'undefined' && typeof target.webkitSupportsPresentationMode === 'function' && target.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE) && typeof target.webkitSetPresentationMode === 'function') {
-                    if (target.disablePictureInPicture)
-                        return reject(new NotSupportedError('Picture-in-Picture is disabled on this video element.'));
-                    lastPipVideo = target;
-                    bridgeWebkitVideoEvents();
-                    target.webkitSetPresentationMode(PIP_PRESENTATION_MODE);
-                    return resolve();
-                }
-                reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
-            }
-            var method = target.requestPictureInPicture;
-            if (typeof method === 'function') {
-                var result = method.call(target);
-                if (typeof result !== 'undefined' && typeof result.then === 'function') {
-                    result
-                        .then(function () {
-                        resolve();
-                    })
-                        .catch(function () {
-                        fallbackToWebkitVideo();
-                    });
-                    return;
-                }
-                return resolve();
-            }
-            fallbackToWebkitVideo();
-        });
-    }
-    function exitImmediately() {
-        return new Promise(function (resolve, reject) {
-            if (getElement() === null && lastPipVideo === null)
-                return resolve();
-            function fallbackToWebkitVideo() {
-                var candidates;
-                if (lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE)
-                    candidates = [lastPipVideo];
-                else
-                    candidates = globalThis.document.querySelectorAll('video');
-                for (var i = 0; i < candidates.length; i++) {
-                    var video = candidates[i];
-                    if (typeof video.webkitSetPresentationMode === 'function' && video.webkitPresentationMode === PIP_PRESENTATION_MODE) {
-                        video.webkitSetPresentationMode(INLINE_PRESENTATION_MODE);
-                        lastPipVideo = null;
-                        return resolve();
-                    }
-                }
-                if (getElement() === null)
-                    return resolve();
-                reject(new NotSupportedError('Failed to exit Picture-in-Picture mode.'));
-            }
-            var method = globalThis.document.exitPictureInPicture;
-            if (typeof method === 'function') {
-                var result = method.call(globalThis.document);
-                if (typeof result !== 'undefined' && typeof result.then === 'function') {
-                    result
-                        .then(resolve)
-                        .catch(function () {
-                        fallbackToWebkitVideo();
-                    });
-                    return;
-                }
-                return resolve();
-            }
-            fallbackToWebkitVideo();
-        });
-    }
-    function toggle(target) {
-        if (lastIntendedOperation === 'request')
-            return exit();
-        return request(target);
-    }
-    bridgeEvents();
+function getDefaultTarget() {
+    var video = globalThis.document.querySelector('video');
+    return video !== null ? video : undefined;
+}
+function createPipEventPayload(nativeEvent, element, isPip) {
     return {
-        get supported() {
-            return getEnabled();
-        },
-        get element() {
-            return getElement();
-        },
-        get isPip() {
-            return getIsPip();
-        },
-        request: request,
-        exit: exit,
-        toggle: toggle,
-        onChange: onChangeSubscriptionManager.subscribe,
-        onError: onErrorSubscriptionManager.subscribe,
-        Constants: {},
-        Errors: {
-            NotSupportedError: NotSupportedError,
-        },
+        nativeEvent: nativeEvent,
+        element: element,
+        isPip: isPip
     };
 }
-var Pip = createPip();
+function emitChange(nativeEvent, element, isPip) {
+    onChangeSubscriptionManager.emit(createPipEventPayload(nativeEvent, element, isPip));
+}
+function emitError(nativeEvent, element, isPip) {
+    onErrorSubscriptionManager.emit(createPipEventPayload(nativeEvent, element, isPip));
+}
+function onEnterPictureInPicture(event) {
+    var target = event.target;
+    if (target instanceof globalThis.HTMLVideoElement)
+        emitChange(event, target, true);
+}
+function onLeavePictureInPicture(event) {
+    var target = event.target;
+    if (target instanceof globalThis.HTMLVideoElement)
+        emitChange(event, target, false);
+}
+function onPictureInPictureError(event) {
+    var target = event.target;
+    if (target instanceof globalThis.HTMLVideoElement)
+        emitError(event, target, getIsPip());
+}
+function onWebkitPresentationModeChanged(event) {
+    if (this.webkitPresentationMode === PIP_PRESENTATION_MODE) {
+        lastPipVideo = this;
+        emitChange(event, this, true);
+        return;
+    }
+    if (this.webkitPresentationMode === INLINE_PRESENTATION_MODE && lastPipVideo === this) {
+        lastPipVideo = null;
+        emitChange(event, this, false);
+    }
+}
+function bridgeSingleVideoNode(video) {
+    if (video[PIP_BRIDGE_KEY])
+        return;
+    if (typeof video.webkitSetPresentationMode === 'undefined' && typeof video.onwebkitpresentationmodechanged === 'undefined')
+        return;
+    EventListener.add(video, { type: 'webkitpresentationmodechanged', callback: onWebkitPresentationModeChanged, options: false });
+    video[PIP_BRIDGE_KEY] = true;
+}
+function bridgeWebkitVideoEvents() {
+    var videos = globalThis.document.querySelectorAll('video');
+    for (var i = 0; i < videos.length; i++)
+        bridgeSingleVideoNode(videos[i]);
+}
+function bridgeEvents() {
+    if (eventsBridged)
+        return;
+    eventsBridged = true;
+    if (hasStandardApi())
+        return;
+    bridgeWebkitVideoEvents();
+    if (typeof globalThis.MutationObserver === 'undefined')
+        return;
+    var observer = new globalThis.MutationObserver(function (records) {
+        if (lastPipVideo !== null) {
+            var removed = false;
+            for (var i = 0; i < records.length; i++) {
+                var removedNodes = records[i].removedNodes;
+                for (var j = 0; j < removedNodes.length; j++) {
+                    var node = removedNodes[j];
+                    if (node === lastPipVideo || (node.nodeType === Node.ELEMENT_NODE && node.contains(lastPipVideo))) {
+                        removed = true;
+                        break;
+                    }
+                }
+                if (removed)
+                    break;
+            }
+            if (removed && !globalThis.document.contains(lastPipVideo))
+                lastPipVideo = null;
+        }
+        for (var i = 0; i < records.length; i++) {
+            var addedNodes = records[i].addedNodes;
+            for (var j = 0; j < addedNodes.length; j++) {
+                var node = addedNodes[j];
+                if (node.nodeType !== Node.ELEMENT_NODE)
+                    continue;
+                var element = node;
+                if (element.tagName === 'VIDEO') {
+                    bridgeSingleVideoNode(element);
+                    continue;
+                }
+                var nested = element.querySelectorAll('video');
+                for (var k = 0; k < nested.length; k++)
+                    bridgeSingleVideoNode(nested[k]);
+            }
+        }
+    });
+    observer.observe(globalThis.document.documentElement, { childList: true, subtree: true });
+}
+function attachOnChange() {
+    if (hasStandardApi()) {
+        EventListener.add(globalThis.document, { type: 'enterpictureinpicture', callback: onEnterPictureInPicture, options: false });
+        EventListener.add(globalThis.document, { type: 'leavepictureinpicture', callback: onLeavePictureInPicture, options: false });
+        return;
+    }
+    bridgeWebkitVideoEvents();
+}
+function detachOnChange() {
+    if (hasStandardApi()) {
+        EventListener.remove(globalThis.document, { type: 'enterpictureinpicture', callback: onEnterPictureInPicture, options: false });
+        EventListener.remove(globalThis.document, { type: 'leavepictureinpicture', callback: onLeavePictureInPicture, options: false });
+        return;
+    }
+    var videos = globalThis.document.querySelectorAll('video');
+    for (var i = 0; i < videos.length; i++) {
+        EventListener.remove(videos[i], { type: 'webkitpresentationmodechanged', callback: onWebkitPresentationModeChanged, options: false });
+        videos[i][PIP_BRIDGE_KEY] = false;
+    }
+}
+function attachOnError() {
+    EventListener.add(globalThis.document, { type: 'pictureinpictureerror', callback: onPictureInPictureError, options: false });
+}
+function detachOnError() {
+    EventListener.remove(globalThis.document, { type: 'pictureinpictureerror', callback: onPictureInPictureError, options: false });
+}
+function getEnabled() {
+    if (typeof globalThis.document.pictureInPictureEnabled === 'boolean')
+        return globalThis.document.pictureInPictureEnabled;
+    var video;
+    var selected = globalThis.document.querySelector('video');
+    if (selected !== null)
+        video = selected;
+    else
+        video = globalThis.document.createElement('video');
+    return typeof video.webkitSupportsPresentationMode === 'function' && video.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE);
+}
+function getElement() {
+    var currentElement = globalThis.document.pictureInPictureElement;
+    if (currentElement !== null && typeof currentElement !== 'undefined')
+        return currentElement;
+    if (lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE)
+        return lastPipVideo;
+    return null;
+}
+function getIsPip() {
+    return getElement() !== null;
+}
+function request(target) {
+    return new Promise(function (resolve, reject) {
+        if (typeof target === 'undefined')
+            target = getDefaultTarget();
+        if (typeof target === 'undefined')
+            return reject(new NotSupportedError('Failed to enter Picture-in-Picture mode.'));
+        var tagName = target.tagName.toLowerCase();
+        if (tagName !== 'video')
+            return reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
+        var method = target.requestPictureInPicture;
+        var isWebkitPipActive = lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE;
+        if (typeof method === 'function' && !isWebkitPipActive) {
+            var result = method.call(target);
+            if (typeof result !== 'undefined' && typeof result.then === 'function') {
+                result
+                    .then(resolve)
+                    .catch(function () {
+                    try {
+                        fallbackToWebkit();
+                    }
+                    catch (e) {
+                        reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
+                    }
+                });
+                return;
+            }
+            return resolve();
+        }
+        function fallbackToWebkit() {
+            if (typeof target !== 'undefined' && typeof target.webkitSupportsPresentationMode === 'function' && target.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE) && typeof target.webkitSetPresentationMode === 'function') {
+                if (target.disablePictureInPicture)
+                    return reject(new NotSupportedError('Picture-in-Picture is disabled on this element.'));
+                if (!hasStandardApi())
+                    bridgeSingleVideoNode(target);
+                target.webkitSetPresentationMode(PIP_PRESENTATION_MODE);
+                if (target.webkitPresentationMode !== PIP_PRESENTATION_MODE)
+                    return reject(new InvalidStateError('Picture-in-Picture transition is already in progress.'));
+                lastPipVideo = target;
+                return resolve();
+            }
+            reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
+        }
+        fallbackToWebkit();
+    });
+}
+function exit() {
+    return new Promise(function (resolve, reject) {
+        var method = globalThis.document.exitPictureInPicture;
+        if (typeof method === 'function') {
+            var result = method.call(globalThis.document);
+            if (typeof result !== 'undefined' && typeof result.then === 'function') {
+                result
+                    .then(resolve)
+                    .catch(function () {
+                    try {
+                        fallbackToWebkit();
+                    }
+                    catch (e) {
+                        reject(new NotSupportedError('Failed to exit Picture-in-Picture mode.'));
+                    }
+                });
+                return;
+            }
+            return resolve();
+        }
+        function fallbackToWebkit() {
+            if (lastPipVideo !== null && typeof lastPipVideo.webkitSetPresentationMode === 'function' && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE) {
+                lastPipVideo.webkitSetPresentationMode(INLINE_PRESENTATION_MODE);
+                lastPipVideo = null;
+                return resolve();
+            }
+            var videos = globalThis.document.querySelectorAll('video');
+            for (var i = 0; i < videos.length; i++) {
+                var video = videos[i];
+                if (typeof video.webkitSetPresentationMode === 'function' && video.webkitPresentationMode === PIP_PRESENTATION_MODE) {
+                    video.webkitSetPresentationMode(INLINE_PRESENTATION_MODE);
+                    lastPipVideo = null;
+                    return resolve();
+                }
+            }
+            if (globalThis.document.pictureInPictureElement === null || typeof globalThis.document.pictureInPictureElement === 'undefined')
+                return resolve();
+            reject(new NotSupportedError('Failed to exit Picture-in-Picture mode.'));
+        }
+        fallbackToWebkit();
+    });
+}
+bridgeEvents();
 
 module.exports = Pip;

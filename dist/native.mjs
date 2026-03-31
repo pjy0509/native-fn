@@ -1,4 +1,4 @@
-var version = "1.1.9";
+var version = "1.2.0";
 var packageJSON = {
 	version: version};
 
@@ -853,14 +853,14 @@ function createSubscriptionManager(attach, detach) {
     };
 }
 
-var onChangeSubscriptionManager$3 = createSubscriptionManager(attachOnChange$3, detachOnChange$3);
+var onChangeSubscriptionManager$5 = createSubscriptionManager(attachOnChange$5, detachOnChange$5);
 var appearanceRef = null;
 var pollingIntervalId = null;
 var Appearance = {
     get value() {
         return getAppearance();
     },
-    onChange: onChangeSubscriptionManager$3.subscribe,
+    onChange: onChangeSubscriptionManager$5.subscribe,
     Constants: {
         Appearances: Appearances
     },
@@ -896,7 +896,7 @@ function startPolling() {
         var appearance = getAppearanceFromEngine();
         if (appearance !== appearanceRef) {
             appearanceRef = appearance;
-            onChangeSubscriptionManager$3.emit(appearance);
+            onChangeSubscriptionManager$5.emit(appearance);
         }
     }, 2000);
 }
@@ -907,13 +907,13 @@ function stopPolling() {
         pollingIntervalId = null;
     }
 }
-function attachOnChange$3() {
+function attachOnChange$5() {
     appearanceRef = getAppearanceFromMediaQuery();
     EventListener.add(MEDIA_QUERY_LIST$1, { type: 'change', callback: onMediaChange });
     if (Platform.browser.name === Browsers.SamsungInternet)
         startPolling();
 }
-function detachOnChange$3() {
+function detachOnChange$5() {
     appearanceRef = null;
     EventListener.remove(MEDIA_QUERY_LIST$1, { type: 'change', callback: onMediaChange });
     if (Platform.browser.name === Browsers.SamsungInternet)
@@ -926,7 +926,7 @@ function onMediaChange(event) {
     else
         appearance = Appearances.Light;
     if (appearance !== appearanceRef)
-        onChangeSubscriptionManager$3.emit(appearanceRef = appearance);
+        onChangeSubscriptionManager$5.emit(appearanceRef = appearance);
 }
 
 function isSecureContext() {
@@ -1662,14 +1662,14 @@ var safeAreaMaxInsetObserver = createEnvObserver('safe-area-max-inset');
 var keyboardInsetObserver = createEnvObserver('keyboard-inset');
 var titlebarAreaObserver = createEnvObserver('titlebar-area');
 var viewportSegmentObserver = createEnvObserver('viewport-segment');
-var onChangeSubscriptionManager$2 = createSubscriptionManager(attachOnChange$2, detachOnChange$2);
+var onChangeSubscriptionManager$4 = createSubscriptionManager(attachOnChange$4, detachOnChange$4);
 var dimensionRef = null;
 var Dimension = {
     get value() {
         return getDimension();
     },
     environment: getEnvironment(),
-    onChange: onChangeSubscriptionManager$2.subscribe,
+    onChange: onChangeSubscriptionManager$4.subscribe,
     Constants: {
         Orientation: Orientation,
     },
@@ -1755,7 +1755,7 @@ function getDimension() {
     }
     return FALLBACK_DIMENSION;
 }
-function attachOnChange$2() {
+function attachOnChange$4() {
     dimensionRef = getDimension();
     EventListener.add(globalThis, { type: 'resize', callback: onResize });
     if (typeof globalThis.screen.orientation.addEventListener === 'function')
@@ -1765,7 +1765,7 @@ function attachOnChange$2() {
     else if (MEDIA_QUERY_LIST.media !== 'not all')
         EventListener.add(MEDIA_QUERY_LIST, { type: 'change', callback: onResize });
 }
-function detachOnChange$2() {
+function detachOnChange$4() {
     dimensionRef = null;
     EventListener.remove(globalThis, { type: 'resize', callback: onResize });
     if (typeof globalThis.screen.orientation.removeEventListener === 'function')
@@ -1778,7 +1778,7 @@ function detachOnChange$2() {
 function onResize() {
     var dimension = getDimension();
     if (dimensionRef === null || dimension.innerWidth !== dimensionRef.innerWidth || dimension.innerHeight !== dimensionRef.innerHeight || dimension.outerWidth !== dimensionRef.outerWidth || dimension.outerHeight !== dimensionRef.outerHeight || dimension.scale !== dimensionRef.scale || dimension.orientation !== dimensionRef.orientation)
-        onChangeSubscriptionManager$2.emit(dimensionRef = dimension);
+        onChangeSubscriptionManager$4.emit(dimensionRef = dimension);
 }
 
 function createCustomError(name, Base) {
@@ -1865,7 +1865,19 @@ function createCustomError(name, Base) {
 
 var NotSupportedError = createCustomError('NotSupportedError');
 
-var FS_BRIDGED_KEY = Symbol('fsBridged');
+var InvalidStateError = createCustomError('InvalidStateError');
+
+var lastIOSVideo = null;
+var eventsBridged$1 = false;
+var FS_BRIDGE_KEY = (function () {
+    if (typeof Symbol === 'function') {
+        var existing = globalThis.__nativeFnFsBridgeKey__;
+        if (typeof existing === 'symbol')
+            return existing;
+        return globalThis.__nativeFnFsBridgeKey__ = Symbol('native.fn.fs.bridged');
+    }
+    return '__nativeFnFsBridged__';
+}());
 var API_VARIANTS = {
     standard: {
         enabled: 'fullscreenEnabled',
@@ -1897,6 +1909,31 @@ var API_VARIANTS = {
     },
 };
 var api = detectApi();
+var onChangeSubscriptionManager$3 = createSubscriptionManager(attachOnChange$3, detachOnChange$3);
+var onErrorSubscriptionManager$1 = createSubscriptionManager(attachOnError$1, detachOnError$1);
+var Fullscreen = {
+    get supported() {
+        return getEnabled$1();
+    },
+    get element() {
+        return getElement$1();
+    },
+    get isFullscreen() {
+        return getIsFullscreen();
+    },
+    request: request$3,
+    exit: exit$1,
+    onChange: onChangeSubscriptionManager$3.subscribe,
+    onError: onErrorSubscriptionManager$1.subscribe,
+    Constants: {},
+    Errors: {
+        NotSupportedError: NotSupportedError,
+        InvalidStateError: InvalidStateError,
+    },
+};
+function hasStandardApi$1() {
+    return api !== null;
+}
 function detectApi() {
     var element = globalThis.document.documentElement;
     if (typeof globalThis.document.fullscreenEnabled !== 'undefined' || typeof globalThis.document.exitFullscreen !== 'undefined')
@@ -1913,287 +1950,282 @@ function detectApi() {
     }
     return null;
 }
-function createFullscreen() {
-    var lastIOSVideo = null;
-    var eventsBridged = false;
-    var activeOperation = null;
-    var pendingQueue = [];
-    var lastIntendedOperation = 'exit';
-    var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
-    var onErrorSubscriptionManager = createSubscriptionManager(attachOnError, detachOnError);
-    function getDefaultTarget() {
-        if (Platform.os.name === OS.iOS) {
-            var video = globalThis.document.querySelector('video');
-            if (video === null)
-                return undefined;
-            return video;
-        }
-        return globalThis.document.documentElement;
+function getDefaultTarget$1() {
+    if (Platform.os.name === OS.iOS) {
+        var video = globalThis.document.querySelector('video');
+        return video !== null ? video : undefined;
     }
-    function bridgeEvents() {
-        if (eventsBridged)
-            return;
-        eventsBridged = true;
-        if (Platform.os.name === OS.iOS) {
-            bridgeIOSVideoEvents();
-            if (typeof globalThis.MutationObserver !== 'undefined') {
-                var observer = new MutationObserver(function () {
-                    bridgeIOSVideoEvents();
-                });
-                observer.observe(globalThis.document.documentElement, {
-                    childList: true,
-                    subtree: true,
-                });
-            }
-        }
-    }
-    function bridgeIOSVideoEvents() {
-        if (typeof globalThis.document === 'undefined')
-            return;
-        var videos = globalThis.document.querySelectorAll('video');
-        videos.forEach(function (video) {
-            if (video[FS_BRIDGED_KEY] === true || !(typeof video.webkitEnterFullscreen !== 'undefined' || typeof video.onwebkitbeginfullscreen !== 'undefined'))
-                return;
-            EventListener.add(video, {
-                type: 'webkitbeginfullscreen',
-                callback: onChangeSubscriptionManager.emit,
-                options: false,
-            });
-            EventListener.add(video, {
-                type: 'webkitendfullscreen',
-                callback: onChangeSubscriptionManager.emit,
-                options: false,
-            });
-            video[FS_BRIDGED_KEY] = true;
-        });
-    }
-    function attachOnChange() {
-        var events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
-        for (var i = 0; i < events.length; i++) {
-            EventListener.add(globalThis.document, {
-                type: events[i],
-                callback: onChangeSubscriptionManager.emit,
-                options: false,
-            });
-        }
-    }
-    function detachOnChange() {
-        var events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
-        for (var i = 0; i < events.length; i++) {
-            EventListener.remove(globalThis.document, {
-                type: events[i],
-                callback: onChangeSubscriptionManager.emit,
-                options: false,
-            });
-        }
-    }
-    function attachOnError() {
-        var events = ['fullscreenerror', 'webkitfullscreenerror', 'mozfullscreenerror', 'MSFullscreenError'];
-        for (var i = 0; i < events.length; i++) {
-            EventListener.add(globalThis.document, {
-                type: events[i],
-                callback: onErrorSubscriptionManager.emit,
-                options: false,
-            });
-        }
-    }
-    function detachOnError() {
-        var events = ['fullscreenerror', 'webkitfullscreenerror', 'mozfullscreenerror', 'MSFullscreenError'];
-        for (var i = 0; i < events.length; i++) {
-            EventListener.remove(globalThis.document, {
-                type: events[i],
-                callback: onErrorSubscriptionManager.emit,
-                options: false,
-            });
-        }
-    }
-    function getEnabled() {
-        if (api === null)
-            return (Platform.os.name === OS.iOS && globalThis.HTMLVideoElement.prototype.webkitSupportsFullscreen === true);
+    return globalThis.document.documentElement;
+}
+function getEnabled$1() {
+    if (api !== null)
         return globalThis.document[api.enabled] === true;
-    }
-    function getElement() {
-        if (api === null) {
-            if (lastIOSVideo !== null && lastIOSVideo.webkitDisplayingFullscreen === true)
-                return lastIOSVideo;
-            return null;
-        }
-        var currentElement = globalThis.document[api.element];
-        if (typeof currentElement !== 'undefined')
-            return currentElement;
+    if (Platform.os.name !== OS.iOS)
+        return false;
+    var video;
+    var selected = globalThis.document.querySelector('video');
+    if (selected !== null)
+        video = selected;
+    else
+        video = globalThis.document.createElement('video');
+    return video.webkitSupportsFullscreen === true || typeof video.webkitEnterFullscreen === 'function';
+}
+function getElement$1() {
+    if (api === null) {
+        if (lastIOSVideo !== null && lastIOSVideo.webkitDisplayingFullscreen === true)
+            return lastIOSVideo;
         return null;
     }
-    function getIsFullscreen() {
-        return getElement() !== null;
-    }
-    function drainPendingOperation() {
-        var entry = pendingQueue.shift();
-        if (typeof entry === 'undefined') {
-            activeOperation = null;
-            return;
-        }
-        var next;
-        if (entry.operation === 'request')
-            next = requestImmediately(entry.target, entry.options);
-        else
-            next = exitImmediately();
-        activeOperation = next
-            .then(function () {
-            entry.resolve();
-            drainPendingOperation();
-        })
-            .catch(function (error) {
-            entry.reject(error);
-            drainPendingOperation();
-        });
-    }
-    function request(target, options) {
-        lastIntendedOperation = 'request';
-        if (activeOperation === null) {
-            var next = requestImmediately(target, options);
-            activeOperation = next
-                .then(drainPendingOperation)
-                .catch(drainPendingOperation);
-            return next;
-        }
-        return new Promise(function (resolve, reject) {
-            pendingQueue.push({
-                operation: 'request',
-                target: target,
-                options: options,
-                resolve: resolve,
-                reject: reject,
-            });
-        });
-    }
-    function exit() {
-        lastIntendedOperation = 'exit';
-        if (activeOperation === null) {
-            var next = exitImmediately();
-            activeOperation = next
-                .then(drainPendingOperation)
-                .catch(drainPendingOperation);
-            return next;
-        }
-        return new Promise(function (resolve, reject) {
-            pendingQueue.push({
-                operation: 'exit',
-                target: undefined,
-                options: undefined,
-                resolve: resolve,
-                reject: reject,
-            });
-        });
-    }
-    function requestImmediately(target, options) {
-        return new Promise(function (resolve, reject) {
-            if (typeof target === 'undefined')
-                target = getDefaultTarget();
-            if (typeof target === 'undefined')
-                return reject(new NotSupportedError('Failed to enter fullscreen mode.'));
-            var tagName = target.tagName.toLowerCase();
-            function fallbackToIOSVideo() {
-                if (Platform.os.name === OS.iOS && typeof target !== 'undefined' && target.tagName.toUpperCase() === 'VIDEO') {
-                    var video = target;
-                    if (video.webkitSupportsFullscreen === true && typeof video.webkitEnterFullscreen === 'function') {
-                        lastIOSVideo = video;
-                        bridgeIOSVideoEvents();
-                        video.webkitEnterFullscreen();
-                        return resolve();
+    var currentElement = globalThis.document[api.element];
+    if (typeof currentElement !== 'undefined')
+        return currentElement;
+    return null;
+}
+function getIsFullscreen() {
+    return getElement$1() !== null;
+}
+function createEventPayload(nativeEvent, element, isFullscreen) {
+    return {
+        nativeEvent: nativeEvent,
+        element: element,
+        isFullscreen: isFullscreen,
+    };
+}
+function emitChange$1(nativeEvent, element, isFullscreen) {
+    onChangeSubscriptionManager$3.emit(createEventPayload(nativeEvent, element, isFullscreen));
+}
+function emitError$1(nativeEvent, element, isFullscreen) {
+    onErrorSubscriptionManager$1.emit(createEventPayload(nativeEvent, element, isFullscreen));
+}
+function onFullscreenChange(event) {
+    var target = event.target;
+    if (target instanceof globalThis.Element)
+        emitChange$1(event, target, getIsFullscreen());
+    if (target instanceof globalThis.Document)
+        emitChange$1(event, globalThis.document.documentElement, getIsFullscreen());
+}
+function onFullscreenError(event) {
+    var target = event.target;
+    if (target instanceof globalThis.Element)
+        emitError$1(event, target, getIsFullscreen());
+    if (target instanceof globalThis.Document)
+        emitError$1(event, globalThis.document.documentElement, getIsFullscreen());
+}
+function onIOSBeginFullscreen(event) {
+    lastIOSVideo = this;
+    emitChange$1(event, this, true);
+}
+function onIOSEndFullscreen(event) {
+    if (lastIOSVideo === this)
+        lastIOSVideo = null;
+    emitChange$1(event, this, false);
+}
+function bridgeSingleVideoNode$1(video) {
+    if (video[FS_BRIDGE_KEY])
+        return;
+    if (typeof video.webkitEnterFullscreen === 'undefined' && typeof video.onwebkitbeginfullscreen === 'undefined')
+        return;
+    EventListener.add(video, { type: 'webkitbeginfullscreen', callback: onIOSBeginFullscreen, options: false });
+    EventListener.add(video, { type: 'webkitendfullscreen', callback: onIOSEndFullscreen, options: false });
+    video[FS_BRIDGE_KEY] = true;
+}
+function bridgeIOSVideoEvents() {
+    var videos = globalThis.document.querySelectorAll('video');
+    for (var i = 0; i < videos.length; i++)
+        bridgeSingleVideoNode$1(videos[i]);
+}
+function bridgeEvents$1() {
+    if (eventsBridged$1)
+        return;
+    eventsBridged$1 = true;
+    if (Platform.os.name !== OS.iOS)
+        return;
+    bridgeIOSVideoEvents();
+    if (typeof globalThis.MutationObserver === 'undefined')
+        return;
+    var observer = new globalThis.MutationObserver(function (records) {
+        if (lastIOSVideo !== null) {
+            var removed = false;
+            for (var i = 0; i < records.length; i++) {
+                var removedNodes = records[i].removedNodes;
+                for (var j = 0; j < removedNodes.length; j++) {
+                    var node = removedNodes[j];
+                    if (node === lastIOSVideo || (node.nodeType === Node.ELEMENT_NODE && node.contains(lastIOSVideo))) {
+                        removed = true;
+                        break;
                     }
                 }
-                reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
+                if (removed)
+                    break;
             }
-            if (api !== null) {
-                var method = target[api.request];
-                if (typeof method === 'function') {
-                    var result = method.call(target, options);
-                    if (typeof result !== 'undefined' && typeof result.then === 'function') {
-                        result
-                            .then(resolve)
-                            .catch(function () {
+            if (removed && !globalThis.document.contains(lastIOSVideo))
+                lastIOSVideo = null;
+        }
+        for (var i = 0; i < records.length; i++) {
+            var addedNodes = records[i].addedNodes;
+            for (var j = 0; j < addedNodes.length; j++) {
+                var node = addedNodes[j];
+                if (node.nodeType !== Node.ELEMENT_NODE)
+                    continue;
+                var element = node;
+                if (element.tagName === 'VIDEO') {
+                    bridgeSingleVideoNode$1(element);
+                    continue;
+                }
+                var nested = element.querySelectorAll('video');
+                for (var k = 0; k < nested.length; k++)
+                    bridgeSingleVideoNode$1(nested[k]);
+            }
+        }
+    });
+    observer.observe(globalThis.document.documentElement, { childList: true, subtree: true });
+}
+function attachOnChange$3() {
+    if (api != null)
+        EventListener.add(globalThis.document, { type: api.events.change, callback: onFullscreenChange, options: false });
+    if (Platform.os.name === OS.iOS)
+        bridgeIOSVideoEvents();
+}
+function detachOnChange$3() {
+    if (api != null)
+        EventListener.remove(globalThis.document, { type: api.events.change, callback: onFullscreenChange, options: false });
+    if (Platform.os.name !== OS.iOS)
+        return;
+    var videos = globalThis.document.querySelectorAll('video');
+    for (var i = 0; i < videos.length; i++) {
+        EventListener.remove(videos[i], { type: 'webkitbeginfullscreen', callback: onIOSBeginFullscreen, options: false });
+        EventListener.remove(videos[i], { type: 'webkitendfullscreen', callback: onIOSEndFullscreen, options: false });
+        videos[i][FS_BRIDGE_KEY] = false;
+    }
+}
+function attachOnError$1() {
+    if (api != null)
+        EventListener.add(globalThis.document, { type: api.events.error, callback: onFullscreenError, options: false });
+}
+function detachOnError$1() {
+    if (api != null)
+        EventListener.remove(globalThis.document, { type: api.events.error, callback: onFullscreenError, options: false });
+}
+function request$3(target, options) {
+    return new Promise(function (resolve, reject) {
+        if (typeof target === 'undefined')
+            target = getDefaultTarget$1();
+        if (typeof target === 'undefined')
+            return reject(new NotSupportedError('Failed to enter fullscreen mode.'));
+        var tagName = target.tagName.toLowerCase();
+        var isIOSFullscreenActive = lastIOSVideo !== null && lastIOSVideo.webkitDisplayingFullscreen === true;
+        if (api !== null) {
+            var method = target[api.request];
+            if (typeof method === 'function' && !isIOSFullscreenActive) {
+                var result = method.call(target, options);
+                if (typeof result !== 'undefined' && typeof result.then === 'function') {
+                    result
+                        .then(resolve)
+                        .catch(function () {
+                        try {
                             if (Platform.os.name !== OS.iOS)
                                 return reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
                             fallbackToIOSVideo();
+                        }
+                        catch (_e) {
+                            reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
+                        }
+                    });
+                    return;
+                }
+                return resolve();
+            }
+        }
+        function fallbackToIOSVideo() {
+            if (Platform.os.name === OS.iOS && typeof target !== 'undefined' && target.tagName.toUpperCase() === 'VIDEO') {
+                var video_1 = target;
+                if (video_1.webkitSupportsFullscreen && typeof video_1.webkitEnterFullscreen === 'function') {
+                    if (!hasStandardApi$1())
+                        bridgeSingleVideoNode$1(video_1);
+                    if (video_1.played.length === 0) {
+                        video_1.play()
+                            .then(function () {
+                            try {
+                                video_1.webkitEnterFullscreen();
+                            }
+                            catch (e) {
+                                return reject(new InvalidStateError('The object is in an invalid state.'));
+                            }
                         });
-                        return;
                     }
+                    else {
+                        try {
+                            video_1.webkitEnterFullscreen();
+                        }
+                        catch (e) {
+                            return reject(new InvalidStateError('The object is in an invalid state.'));
+                        }
+                    }
+                    lastIOSVideo = video_1;
                     return resolve();
                 }
             }
-            fallbackToIOSVideo();
-        });
-    }
-    function exitImmediately() {
-        return new Promise(function (resolve, reject) {
-            if (getElement() === null && lastIOSVideo === null)
-                return resolve();
-            function fallbackToIOSVideo() {
-                if (Platform.os.name === OS.iOS) {
-                    var candidates = void 0;
-                    if (lastIOSVideo !== null)
-                        candidates = [lastIOSVideo];
-                    else
-                        candidates = globalThis.document.querySelectorAll('video');
-                    for (var i = 0; i < candidates.length; i++) {
-                        var video = candidates[i];
-                        if (typeof video.webkitExitFullscreen === 'function' && video.webkitDisplayingFullscreen === true) {
-                            video.webkitExitFullscreen();
-                            lastIOSVideo = null;
-                            return resolve();
-                        }
-                    }
-                }
-                reject(new NotSupportedError('Failed to exit fullscreen mode.'));
-            }
-            if (api !== null) {
-                var method = globalThis.document[api.exit];
-                if (typeof method === 'function') {
-                    var result = method.call(globalThis.document);
-                    if (typeof result !== 'undefined' && typeof result.then === 'function') {
-                        result
-                            .then(resolve)
-                            .catch(function () {
+            reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
+        }
+        fallbackToIOSVideo();
+    });
+}
+function exit$1() {
+    return new Promise(function (resolve, reject) {
+        if (api !== null) {
+            var method = globalThis.document[api.exit];
+            if (typeof method === 'function') {
+                var result = method.call(globalThis.document);
+                if (typeof result !== 'undefined' && typeof result.then === 'function') {
+                    result
+                        .then(resolve)
+                        .catch(function () {
+                        try {
                             if (Platform.os.name !== OS.iOS)
                                 return reject(new NotSupportedError('Failed to exit fullscreen mode.'));
                             fallbackToIOSVideo();
-                        });
-                        return;
-                    }
+                        }
+                        catch (_e) {
+                            reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+                        }
+                    });
+                    return;
+                }
+                return resolve();
+            }
+        }
+        function fallbackToIOSVideo() {
+            if (Platform.os.name !== OS.iOS) {
+                reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+                return;
+            }
+            var target = lastIOSVideo;
+            if (target !== null && typeof target.webkitExitFullscreen === 'function' && target.webkitDisplayingFullscreen === true) {
+                target.webkitExitFullscreen();
+                if (target.webkitDisplayingFullscreen)
+                    return reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+                lastIOSVideo = null;
+                return resolve();
+            }
+            var videos = globalThis.document.querySelectorAll('video');
+            for (var i = 0; i < videos.length; i++) {
+                var video = videos[i];
+                if (typeof video.webkitExitFullscreen === 'function' && video.webkitDisplayingFullscreen === true) {
+                    video.webkitExitFullscreen();
+                    if (video.webkitDisplayingFullscreen)
+                        return reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+                    lastIOSVideo = null;
                     return resolve();
                 }
             }
-            fallbackToIOSVideo();
-        });
-    }
-    function toggle(target, options) {
-        if (lastIntendedOperation === 'request')
-            return exit();
-        return request(target, options);
-    }
-    bridgeEvents();
-    return {
-        get supported() {
-            return getEnabled();
-        },
-        get element() {
-            return getElement();
-        },
-        get isFullscreen() {
-            return getIsFullscreen();
-        },
-        request: request,
-        exit: exit,
-        toggle: toggle,
-        onChange: onChangeSubscriptionManager.subscribe,
-        onError: onErrorSubscriptionManager.subscribe,
-        Constants: {},
-        Errors: {
-            NotSupportedError: NotSupportedError,
-        },
-    };
+            if (getElement$1() === null)
+                return resolve();
+            reject(new NotSupportedError('Failed to exit fullscreen mode.'));
+        }
+        fallbackToIOSVideo();
+    });
 }
-var Fullscreen = createFullscreen();
+bridgeEvents$1();
 
 var PermissionType;
 (function (PermissionType) {
@@ -2235,7 +2267,10 @@ var GET_USER_MEDIA = (function () {
 })();
 
 var Permission = {
-    request: request$1,
+    get supported() {
+        return supported$5();
+    },
+    request: request$2,
     check: check,
     Constants: {
         PermissionType: PermissionType,
@@ -2243,7 +2278,10 @@ var Permission = {
     },
     Errors: {},
 };
-function request$1(type) {
+function supported$5() {
+    return typeof globalThis.navigator.permissions !== 'undefined';
+}
+function request$2(type) {
     var instance = this;
     return new Promise(function (resolve) {
         function resolveAfterCheck() {
@@ -2333,7 +2371,7 @@ function check(type) {
 
 var PermissionNotGrantedError = createCustomError('PermissionNotGrantedError');
 
-function request(url, options) {
+function request$1(url, options) {
     return new Promise(function (resolve) {
         var method = 'GET';
         var headers = {};
@@ -2415,7 +2453,7 @@ function assign() {
     return to;
 }
 
-var onChangeSubscriptionManager$1 = createSubscriptionManager(attachOnChange$1, detachOnChange$1);
+var onChangeSubscriptionManager$2 = createSubscriptionManager(attachOnChange$2, detachOnChange$2);
 var watchIdRef = null;
 var Geolocation = {
     get value() {
@@ -2424,7 +2462,7 @@ var Geolocation = {
     get supported() {
         return supported$4();
     },
-    onChange: onChangeSubscriptionManager$1.subscribe,
+    onChange: onChangeSubscriptionManager$2.subscribe,
     Constants: {},
     Errors: {
         NotSupportedError: NotSupportedError,
@@ -2461,7 +2499,7 @@ function getValue$1() {
 }
 function getFallbackValue(error) {
     return new Promise(function (resolve, reject) {
-        request('http://ip-api.com/json?fields=lat,lon')
+        request$1('http://ip-api.com/json?fields=lat,lon')
             .then(function (response) {
             if (typeof response !== 'undefined') {
                 var coordinate_1 = {
@@ -2500,7 +2538,7 @@ function normalizeError(error) {
             return new NotSupportedError('Unknown error.');
     }
 }
-function attachOnChange$1() {
+function attachOnChange$2() {
     if (!supported$4())
         return;
     Permission
@@ -2513,13 +2551,13 @@ function attachOnChange$1() {
         }
     });
 }
-function detachOnChange$1() {
+function detachOnChange$2() {
     if (!supported$4() || watchIdRef === null)
         return;
     globalThis.navigator.geolocation.clearWatch(watchIdRef);
 }
 function onGeolocationCoordinatesChange(coordinates) {
-    onChangeSubscriptionManager$1.emit(coordinates);
+    onChangeSubscriptionManager$2.emit(coordinates);
 }
 function supported$4() {
     return typeof globalThis.navigator.geolocation !== 'undefined';
@@ -3970,16 +4008,19 @@ function removeThemeColor() {
 }
 
 var Vibration = {
-    run: run,
-    stop: stop,
     get supported() {
         return supported$3();
     },
+    run: run,
+    stop: stop,
     Constants: {},
     Errors: {
         NotSupportedError: NotSupportedError,
     },
 };
+function supported$3() {
+    return typeof globalThis.navigator.vibrate !== 'undefined';
+}
 function run(pattern) {
     if (supported$3())
         return globalThis.navigator.vibrate(pattern);
@@ -3988,313 +4029,290 @@ function run(pattern) {
 function stop() {
     return this.run(0);
 }
-function supported$3() {
-    return typeof globalThis.navigator.vibrate !== 'undefined';
-}
 
-var PIP_BRIDGED_KEY = Symbol('pipBridged');
 var PIP_PRESENTATION_MODE = 'picture-in-picture';
 var INLINE_PRESENTATION_MODE = 'inline';
-function hasStandardPipEvents() {
+var lastPipVideo = null;
+var eventsBridged = false;
+var PIP_BRIDGE_KEY = (function () {
+    if (typeof Symbol === 'function') {
+        var existing = globalThis.__nativeFnPipBridgeKey__;
+        if (typeof existing === 'symbol')
+            return existing;
+        return globalThis.__nativeFnPipBridgeKey__ = Symbol('native.fn.pip.bridged');
+    }
+    return '__nativeFnPipBridged__';
+}());
+var onChangeSubscriptionManager$1 = createSubscriptionManager(attachOnChange$1, detachOnChange$1);
+var onErrorSubscriptionManager = createSubscriptionManager(attachOnError, detachOnError);
+var Pip = {
+    get supported() {
+        return getEnabled();
+    },
+    get element() {
+        return getElement();
+    },
+    get isPip() {
+        return getIsPip();
+    },
+    request: request,
+    exit: exit,
+    onChange: onChangeSubscriptionManager$1.subscribe,
+    onError: onErrorSubscriptionManager.subscribe,
+    Constants: {},
+    Errors: {
+        NotSupportedError: NotSupportedError,
+        InvalidStateError: InvalidStateError,
+    },
+};
+function hasStandardApi() {
     return typeof globalThis.document.pictureInPictureEnabled !== 'undefined';
 }
-function createPip() {
-    var lastPipVideo = null;
-    var eventsBridged = false;
-    var activeOperation = null;
-    var pendingQueue = [];
-    var lastIntendedOperation = 'exit';
-    var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
-    var onErrorSubscriptionManager = createSubscriptionManager(attachOnError, detachOnError);
-    function getEnabled() {
-        if (typeof globalThis.document.pictureInPictureEnabled === 'boolean')
-            return globalThis.document.pictureInPictureEnabled;
-        if (typeof HTMLVideoElement === 'undefined')
-            return false;
-        var videos = globalThis.document.querySelectorAll('video');
-        for (var i = 0; i < videos.length; i++) {
-            var video = videos[i];
-            if (typeof video.webkitSupportsPresentationMode === 'function' && video.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE))
-                return true;
-        }
-        return false;
-    }
-    function getElement() {
-        var currentElement = globalThis.document.pictureInPictureElement;
-        if (currentElement !== null && typeof currentElement !== 'undefined')
-            return currentElement;
-        if (lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE)
-            return lastPipVideo;
-        return null;
-    }
-    function getIsPip() {
-        return getElement() !== null;
-    }
-    function getDefaultTarget() {
-        var video = globalThis.document.querySelector('video');
-        if (video === null)
-            return undefined;
-        return video;
-    }
-    function onWebkitPresentationModeChanged(event) {
-        if (this.webkitPresentationMode === PIP_PRESENTATION_MODE || (this.webkitPresentationMode === INLINE_PRESENTATION_MODE && lastPipVideo === this))
-            onChangeSubscriptionManager.emit(event);
-    }
-    function bridgeEvents() {
-        if (eventsBridged)
-            return;
-        eventsBridged = true;
-        if (!hasStandardPipEvents()) {
-            bridgeWebkitVideoEvents();
-            if (typeof globalThis.MutationObserver !== 'undefined') {
-                var observer = new MutationObserver(function () {
-                    bridgeWebkitVideoEvents();
-                });
-                observer.observe(globalThis.document.documentElement, {
-                    childList: true,
-                    subtree: true,
-                });
-            }
-        }
-    }
-    function bridgeWebkitVideoEvents() {
-        if (typeof globalThis.document === 'undefined')
-            return;
-        var videos = globalThis.document.querySelectorAll('video');
-        videos.forEach(function (video) {
-            if (video[PIP_BRIDGED_KEY] === true || !(typeof video.webkitSetPresentationMode !== 'undefined' || typeof video.onwebkitpresentationmodechanged !== 'undefined'))
-                return;
-            EventListener.add(video, {
-                type: 'webkitpresentationmodechanged',
-                callback: onWebkitPresentationModeChanged,
-                options: false,
-            });
-            video[PIP_BRIDGED_KEY] = true;
-        });
-    }
-    function attachOnChange() {
-        if (hasStandardPipEvents()) {
-            var changeEvents = ['enterpictureinpicture', 'leavepictureinpicture'];
-            for (var i = 0; i < changeEvents.length; i++) {
-                EventListener.add(globalThis.document, {
-                    type: changeEvents[i],
-                    callback: onChangeSubscriptionManager.emit,
-                    options: false,
-                });
-            }
-            return;
-        }
-        bridgeWebkitVideoEvents();
-    }
-    function detachOnChange() {
-        if (hasStandardPipEvents()) {
-            var changeEvents = ['enterpictureinpicture', 'leavepictureinpicture'];
-            for (var i = 0; i < changeEvents.length; i++) {
-                EventListener.remove(globalThis.document, {
-                    type: changeEvents[i],
-                    callback: onChangeSubscriptionManager.emit,
-                    options: false,
-                });
-            }
-            return;
-        }
-        var videos = globalThis.document.querySelectorAll('video');
-        videos.forEach(function (video) {
-            EventListener.remove(video, {
-                type: 'webkitpresentationmodechanged',
-                callback: onWebkitPresentationModeChanged,
-                options: false,
-            });
-            try {
-                delete video[PIP_BRIDGED_KEY];
-            }
-            catch (_) {
-                video[PIP_BRIDGED_KEY] = undefined;
-            }
-        });
-    }
-    function attachOnError() {
-        EventListener.add(globalThis.document, {
-            type: 'pictureinpictureerror',
-            callback: onErrorSubscriptionManager.emit,
-            options: false,
-        });
-    }
-    function detachOnError() {
-        EventListener.remove(globalThis.document, {
-            type: 'pictureinpictureerror',
-            callback: onErrorSubscriptionManager.emit,
-            options: false,
-        });
-    }
-    function drainPendingOperation() {
-        var entry = pendingQueue.shift();
-        if (typeof entry === 'undefined') {
-            activeOperation = null;
-            return;
-        }
-        var next;
-        if (entry.operation === 'request')
-            next = requestImmediately(entry.target);
-        else
-            next = exitImmediately();
-        activeOperation = next
-            .then(function () {
-            entry.resolve();
-            drainPendingOperation();
-        })
-            .catch(function (error) {
-            entry.reject(error);
-            drainPendingOperation();
-        });
-    }
-    function request(target) {
-        lastIntendedOperation = 'request';
-        if (activeOperation === null) {
-            var next = requestImmediately(target);
-            activeOperation = next
-                .then(drainPendingOperation)
-                .catch(drainPendingOperation);
-            return next;
-        }
-        return new Promise(function (resolve, reject) {
-            pendingQueue.push({
-                operation: 'request',
-                target: target,
-                resolve: resolve,
-                reject: reject,
-            });
-        });
-    }
-    function exit() {
-        lastIntendedOperation = 'exit';
-        if (activeOperation === null) {
-            var next = exitImmediately();
-            activeOperation = next
-                .then(drainPendingOperation)
-                .catch(drainPendingOperation);
-            return next;
-        }
-        return new Promise(function (resolve, reject) {
-            pendingQueue.push({
-                operation: 'exit',
-                target: undefined,
-                resolve: resolve,
-                reject: reject,
-            });
-        });
-    }
-    function requestImmediately(target) {
-        return new Promise(function (resolve, reject) {
-            if (typeof target === 'undefined')
-                target = getDefaultTarget();
-            if (typeof target === 'undefined')
-                return reject(new NotSupportedError('Failed to enter Picture-in-Picture mode.'));
-            var tagName = target.tagName.toLowerCase();
-            if (tagName !== 'video')
-                return reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
-            function fallbackToWebkitVideo() {
-                if (typeof target !== 'undefined' && typeof target.webkitSupportsPresentationMode === 'function' && target.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE) && typeof target.webkitSetPresentationMode === 'function') {
-                    if (target.disablePictureInPicture)
-                        return reject(new NotSupportedError('Picture-in-Picture is disabled on this video element.'));
-                    lastPipVideo = target;
-                    bridgeWebkitVideoEvents();
-                    target.webkitSetPresentationMode(PIP_PRESENTATION_MODE);
-                    return resolve();
-                }
-                reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
-            }
-            var method = target.requestPictureInPicture;
-            if (typeof method === 'function') {
-                var result = method.call(target);
-                if (typeof result !== 'undefined' && typeof result.then === 'function') {
-                    result
-                        .then(function () {
-                        resolve();
-                    })
-                        .catch(function () {
-                        fallbackToWebkitVideo();
-                    });
-                    return;
-                }
-                return resolve();
-            }
-            fallbackToWebkitVideo();
-        });
-    }
-    function exitImmediately() {
-        return new Promise(function (resolve, reject) {
-            if (getElement() === null && lastPipVideo === null)
-                return resolve();
-            function fallbackToWebkitVideo() {
-                var candidates;
-                if (lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE)
-                    candidates = [lastPipVideo];
-                else
-                    candidates = globalThis.document.querySelectorAll('video');
-                for (var i = 0; i < candidates.length; i++) {
-                    var video = candidates[i];
-                    if (typeof video.webkitSetPresentationMode === 'function' && video.webkitPresentationMode === PIP_PRESENTATION_MODE) {
-                        video.webkitSetPresentationMode(INLINE_PRESENTATION_MODE);
-                        lastPipVideo = null;
-                        return resolve();
-                    }
-                }
-                if (getElement() === null)
-                    return resolve();
-                reject(new NotSupportedError('Failed to exit Picture-in-Picture mode.'));
-            }
-            var method = globalThis.document.exitPictureInPicture;
-            if (typeof method === 'function') {
-                var result = method.call(globalThis.document);
-                if (typeof result !== 'undefined' && typeof result.then === 'function') {
-                    result
-                        .then(resolve)
-                        .catch(function () {
-                        fallbackToWebkitVideo();
-                    });
-                    return;
-                }
-                return resolve();
-            }
-            fallbackToWebkitVideo();
-        });
-    }
-    function toggle(target) {
-        if (lastIntendedOperation === 'request')
-            return exit();
-        return request(target);
-    }
-    bridgeEvents();
+function getDefaultTarget() {
+    var video = globalThis.document.querySelector('video');
+    return video !== null ? video : undefined;
+}
+function createPipEventPayload(nativeEvent, element, isPip) {
     return {
-        get supported() {
-            return getEnabled();
-        },
-        get element() {
-            return getElement();
-        },
-        get isPip() {
-            return getIsPip();
-        },
-        request: request,
-        exit: exit,
-        toggle: toggle,
-        onChange: onChangeSubscriptionManager.subscribe,
-        onError: onErrorSubscriptionManager.subscribe,
-        Constants: {},
-        Errors: {
-            NotSupportedError: NotSupportedError,
-        },
+        nativeEvent: nativeEvent,
+        element: element,
+        isPip: isPip
     };
 }
-var Pip = createPip();
+function emitChange(nativeEvent, element, isPip) {
+    onChangeSubscriptionManager$1.emit(createPipEventPayload(nativeEvent, element, isPip));
+}
+function emitError(nativeEvent, element, isPip) {
+    onErrorSubscriptionManager.emit(createPipEventPayload(nativeEvent, element, isPip));
+}
+function onEnterPictureInPicture(event) {
+    var target = event.target;
+    if (target instanceof globalThis.HTMLVideoElement)
+        emitChange(event, target, true);
+}
+function onLeavePictureInPicture(event) {
+    var target = event.target;
+    if (target instanceof globalThis.HTMLVideoElement)
+        emitChange(event, target, false);
+}
+function onPictureInPictureError(event) {
+    var target = event.target;
+    if (target instanceof globalThis.HTMLVideoElement)
+        emitError(event, target, getIsPip());
+}
+function onWebkitPresentationModeChanged(event) {
+    if (this.webkitPresentationMode === PIP_PRESENTATION_MODE) {
+        lastPipVideo = this;
+        emitChange(event, this, true);
+        return;
+    }
+    if (this.webkitPresentationMode === INLINE_PRESENTATION_MODE && lastPipVideo === this) {
+        lastPipVideo = null;
+        emitChange(event, this, false);
+    }
+}
+function bridgeSingleVideoNode(video) {
+    if (video[PIP_BRIDGE_KEY])
+        return;
+    if (typeof video.webkitSetPresentationMode === 'undefined' && typeof video.onwebkitpresentationmodechanged === 'undefined')
+        return;
+    EventListener.add(video, { type: 'webkitpresentationmodechanged', callback: onWebkitPresentationModeChanged, options: false });
+    video[PIP_BRIDGE_KEY] = true;
+}
+function bridgeWebkitVideoEvents() {
+    var videos = globalThis.document.querySelectorAll('video');
+    for (var i = 0; i < videos.length; i++)
+        bridgeSingleVideoNode(videos[i]);
+}
+function bridgeEvents() {
+    if (eventsBridged)
+        return;
+    eventsBridged = true;
+    if (hasStandardApi())
+        return;
+    bridgeWebkitVideoEvents();
+    if (typeof globalThis.MutationObserver === 'undefined')
+        return;
+    var observer = new globalThis.MutationObserver(function (records) {
+        if (lastPipVideo !== null) {
+            var removed = false;
+            for (var i = 0; i < records.length; i++) {
+                var removedNodes = records[i].removedNodes;
+                for (var j = 0; j < removedNodes.length; j++) {
+                    var node = removedNodes[j];
+                    if (node === lastPipVideo || (node.nodeType === Node.ELEMENT_NODE && node.contains(lastPipVideo))) {
+                        removed = true;
+                        break;
+                    }
+                }
+                if (removed)
+                    break;
+            }
+            if (removed && !globalThis.document.contains(lastPipVideo))
+                lastPipVideo = null;
+        }
+        for (var i = 0; i < records.length; i++) {
+            var addedNodes = records[i].addedNodes;
+            for (var j = 0; j < addedNodes.length; j++) {
+                var node = addedNodes[j];
+                if (node.nodeType !== Node.ELEMENT_NODE)
+                    continue;
+                var element = node;
+                if (element.tagName === 'VIDEO') {
+                    bridgeSingleVideoNode(element);
+                    continue;
+                }
+                var nested = element.querySelectorAll('video');
+                for (var k = 0; k < nested.length; k++)
+                    bridgeSingleVideoNode(nested[k]);
+            }
+        }
+    });
+    observer.observe(globalThis.document.documentElement, { childList: true, subtree: true });
+}
+function attachOnChange$1() {
+    if (hasStandardApi()) {
+        EventListener.add(globalThis.document, { type: 'enterpictureinpicture', callback: onEnterPictureInPicture, options: false });
+        EventListener.add(globalThis.document, { type: 'leavepictureinpicture', callback: onLeavePictureInPicture, options: false });
+        return;
+    }
+    bridgeWebkitVideoEvents();
+}
+function detachOnChange$1() {
+    if (hasStandardApi()) {
+        EventListener.remove(globalThis.document, { type: 'enterpictureinpicture', callback: onEnterPictureInPicture, options: false });
+        EventListener.remove(globalThis.document, { type: 'leavepictureinpicture', callback: onLeavePictureInPicture, options: false });
+        return;
+    }
+    var videos = globalThis.document.querySelectorAll('video');
+    for (var i = 0; i < videos.length; i++) {
+        EventListener.remove(videos[i], { type: 'webkitpresentationmodechanged', callback: onWebkitPresentationModeChanged, options: false });
+        videos[i][PIP_BRIDGE_KEY] = false;
+    }
+}
+function attachOnError() {
+    EventListener.add(globalThis.document, { type: 'pictureinpictureerror', callback: onPictureInPictureError, options: false });
+}
+function detachOnError() {
+    EventListener.remove(globalThis.document, { type: 'pictureinpictureerror', callback: onPictureInPictureError, options: false });
+}
+function getEnabled() {
+    if (typeof globalThis.document.pictureInPictureEnabled === 'boolean')
+        return globalThis.document.pictureInPictureEnabled;
+    var video;
+    var selected = globalThis.document.querySelector('video');
+    if (selected !== null)
+        video = selected;
+    else
+        video = globalThis.document.createElement('video');
+    return typeof video.webkitSupportsPresentationMode === 'function' && video.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE);
+}
+function getElement() {
+    var currentElement = globalThis.document.pictureInPictureElement;
+    if (currentElement !== null && typeof currentElement !== 'undefined')
+        return currentElement;
+    if (lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE)
+        return lastPipVideo;
+    return null;
+}
+function getIsPip() {
+    return getElement() !== null;
+}
+function request(target) {
+    return new Promise(function (resolve, reject) {
+        if (typeof target === 'undefined')
+            target = getDefaultTarget();
+        if (typeof target === 'undefined')
+            return reject(new NotSupportedError('Failed to enter Picture-in-Picture mode.'));
+        var tagName = target.tagName.toLowerCase();
+        if (tagName !== 'video')
+            return reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
+        var method = target.requestPictureInPicture;
+        var isWebkitPipActive = lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE;
+        if (typeof method === 'function' && !isWebkitPipActive) {
+            var result = method.call(target);
+            if (typeof result !== 'undefined' && typeof result.then === 'function') {
+                result
+                    .then(resolve)
+                    .catch(function () {
+                    try {
+                        fallbackToWebkit();
+                    }
+                    catch (e) {
+                        reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
+                    }
+                });
+                return;
+            }
+            return resolve();
+        }
+        function fallbackToWebkit() {
+            if (typeof target !== 'undefined' && typeof target.webkitSupportsPresentationMode === 'function' && target.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE) && typeof target.webkitSetPresentationMode === 'function') {
+                if (target.disablePictureInPicture)
+                    return reject(new NotSupportedError('Picture-in-Picture is disabled on this element.'));
+                if (!hasStandardApi())
+                    bridgeSingleVideoNode(target);
+                target.webkitSetPresentationMode(PIP_PRESENTATION_MODE);
+                if (target.webkitPresentationMode !== PIP_PRESENTATION_MODE)
+                    return reject(new InvalidStateError('Picture-in-Picture transition is already in progress.'));
+                lastPipVideo = target;
+                return resolve();
+            }
+            reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
+        }
+        fallbackToWebkit();
+    });
+}
+function exit() {
+    return new Promise(function (resolve, reject) {
+        var method = globalThis.document.exitPictureInPicture;
+        if (typeof method === 'function') {
+            var result = method.call(globalThis.document);
+            if (typeof result !== 'undefined' && typeof result.then === 'function') {
+                result
+                    .then(resolve)
+                    .catch(function () {
+                    try {
+                        fallbackToWebkit();
+                    }
+                    catch (e) {
+                        reject(new NotSupportedError('Failed to exit Picture-in-Picture mode.'));
+                    }
+                });
+                return;
+            }
+            return resolve();
+        }
+        function fallbackToWebkit() {
+            if (lastPipVideo !== null && typeof lastPipVideo.webkitSetPresentationMode === 'function' && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE) {
+                lastPipVideo.webkitSetPresentationMode(INLINE_PRESENTATION_MODE);
+                lastPipVideo = null;
+                return resolve();
+            }
+            var videos = globalThis.document.querySelectorAll('video');
+            for (var i = 0; i < videos.length; i++) {
+                var video = videos[i];
+                if (typeof video.webkitSetPresentationMode === 'function' && video.webkitPresentationMode === PIP_PRESENTATION_MODE) {
+                    video.webkitSetPresentationMode(INLINE_PRESENTATION_MODE);
+                    lastPipVideo = null;
+                    return resolve();
+                }
+            }
+            if (globalThis.document.pictureInPictureElement === null || typeof globalThis.document.pictureInPictureElement === 'undefined')
+                return resolve();
+            reject(new NotSupportedError('Failed to exit Picture-in-Picture mode.'));
+        }
+        fallbackToWebkit();
+    });
+}
+bridgeEvents();
 
 var Badge = {
-    set: set,
-    clear: clear,
     get supported() {
         return supported$2();
     },
+    set: set,
+    clear: clear,
     Constants: {},
     Errors: {
         NotSupportedError: NotSupportedError,
@@ -4366,11 +4384,11 @@ function supported$1() {
 var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
 var batteryRef = null;
 var Battery = {
-    get value() {
-        return getValue();
-    },
     get supported() {
         return supported();
+    },
+    get value() {
+        return getValue();
     },
     onChange: onChangeSubscriptionManager.subscribe,
     Constants: {},

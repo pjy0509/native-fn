@@ -42,6 +42,9 @@ var GET_USER_MEDIA = (function () {
 })();
 
 var Permission = {
+    get supported() {
+        return supported();
+    },
     request: request,
     check: check,
     Constants: {
@@ -50,6 +53,9 @@ var Permission = {
     },
     Errors: {},
 };
+function supported() {
+    return typeof globalThis.navigator.permissions !== 'undefined';
+}
 function request(type) {
     var instance = this;
     return new Promise(function (resolve) {

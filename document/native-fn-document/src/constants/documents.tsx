@@ -1731,6 +1731,21 @@ unsubscribe();
     },
 
     badge: {
+        supported: {
+            signature: `get supported(): boolean`,
+            description: `Returns whether badge is supported in the current environment.`,
+            example: `
+if (Native.badge.supported) {
+    await Native.badge.set(5);
+}
+            `,
+            returns: {
+                type: `boolean`,
+                description: `// true  — badge API support,
+// false — no badge support`,
+            },
+            throws: [],
+        },
         set: {
             signature: `set(contents: number): Promise<void>`,
             description: `Sets the app badge count.`,
@@ -1754,6 +1769,23 @@ await Native.badge.clear();
     },
 
     battery: {
+        supported: {
+            signature: `get supported(): boolean`,
+            description: `Returns whether battery is supported in the current environment.`,
+            example: `
+if (Native.battery.supported) {
+    const battery = await Native.battery.value;
+    
+    console.log(battery.level); // 0.0 – 1.0
+}
+            `,
+            returns: {
+                type: `boolean`,
+                description: `// true  — battery API support,
+// false — no battery support`,
+            },
+            throws: [],
+        },
         value: {
             signature: `get value(): Promise<BatteryManager>`,
             description: `Returns the current battery status.`,
@@ -1964,71 +1996,106 @@ unsubscribe();
     },
 
     fullscreen: {
+        supported: {
+            signature: `get supported(): boolean`,
+            description: `Returns whether fullscreen is supported in the current environment.`,
+            example: `
+if (Native.fullscreen.supported) {
+    await Native.fullscreen.request();
+}
+            `,
+            returns: {
+                type: `boolean`,
+                description: `// true  — standard or vendor-prefixed fullscreen API detected,
+//         or iOS video with webkitSupportsFullscreen
+// false — no fullscreen support`,
+            },
+            throws: [],
+        },
+        element: {
+            signature: `get element(): Element | null`,
+            description: `Returns the element currently displayed in fullscreen, or null if not in fullscreen.`,
+            example: `
+const el = Native.fullscreen.element;
+ 
+if (el !== null) {
+    console.log(el.tagName); // e.g. 'VIDEO', 'DIV'
+}
+            `,
+            returns: {
+                type: `Element | null`,
+                description: `// Element — the current fullscreen element
+// null    — not in fullscreen`,
+            },
+            throws: [],
+        },
+        isFullscreen: {
+            signature: `get isFullscreen(): boolean`,
+            description: `Returns whether fullscreen is currently active.`,
+            example: `
+console.log(Native.fullscreen.isFullscreen); // true | false
+            `,
+            returns: {type: `boolean`},
+            throws: [],
+        },
         request: {
             signature: `request(target?: Element, options?: FullscreenOptions): Promise<void>`,
-            description: `Requests fullscreen for an element. Concurrent calls are queued (FIFO).`,
+            description: `Requests fullscreen for an element.`,
             flowchart: `
 flowchart TD
-    A([Fullscreen.request called]) --> B[Set lastIntendedOperation to request]
-    B --> C{activeOperation in progress?}
-    C -->|no| D[requestImmediately]
-    C -->|yes| E[Push to pendingQueue]
-    D --> F{api available?}
-    F -->|yes| G[Call element api.request]
-    F -->|no| H[fallbackToIOSVideo]
-    G --> I{Promise returned?}
-    I -->|yes| J{Resolved?}
-    J -->|yes| K([resolve])
-    J -->|no| H
-    I -->|no| K
-    H --> L{iOS + VIDEO + webkitSupportsFullscreen?}
-    L -->|yes| M[video.webkitEnterFullscreen]
-    M --> K
-    L -->|no| N([Throw NotSupportedError])
-    D --> O[drainPendingOperation on settle]
+    A([Fullscreen.request called]) --> B{target defined?}
+    B -->|no| C[getDefaultTarget]
+    B -->|yes| D{api available?}
+    C --> D
+    D -->|yes| E[Call element api.request]
+    D -->|no| F[fallbackToIOSVideo]
+    E --> G{Promise returned?}
+    G -->|yes| H{Resolved?}
+    H -->|yes| I([resolve])
+    H -->|no| F
+    G -->|no| I
+    F --> J{iOS + VIDEO + webkitSupportsFullscreen?}
+    J -->|yes| K[video.webkitEnterFullscreen]
+    K --> I
+    J -->|no| L([Throw NotSupportedError])
             `,
             example: `
 // Default: documentElement on desktop, first video on iOS
 await Native.fullscreen.request();
-
+ 
 // Specific element
 await Native.fullscreen.request(document.getElementById('player'));
-
+ 
 // With options
 await Native.fullscreen.request(element, { navigationUI: 'hide' });
-
-// Concurrent calls — safely queued, not dropped
-Native.fullscreen.request(document.querySelector('video#a'));
-Native.fullscreen.request(document.querySelector('video#b'));
             `,
             returns: {type: `Promise<void>`},
             throws: [
                 `throw new NotSupportedError // element does not support fullscreen`,
                 `throw new NotSupportedError // iOS video lacks webkitEnterFullscreen`,
+                `throw new InvalidStateError // iOS video not yet played`,
             ],
             tryItOut: TRY_IT_OUT.fullscreen.request,
         },
         exit: {
             signature: `exit(): Promise<void>`,
-            description: `Exits fullscreen. Concurrent calls are queued (FIFO).`,
+            description: `Exits fullscreen.`,
             flowchart: `
 flowchart TD
-    A([Fullscreen.exit called]) --> B[Set lastIntendedOperation to exit]
-    B --> C{activeOperation in progress?}
-    C -->|no| D[exitImmediately]
-    C -->|yes| E[Push to pendingQueue]
-    D --> F{getElement null and lastIOSVideo null?}
-    F -->|yes| K([resolve immediately])
-    F -->|no| G{api available?}
-    G -->|yes| H[Call document api.exit]
-    G -->|no| I[fallbackToIOSVideo]
-    H --> J{Resolved?}
-    J -->|yes| K
-    J -->|no| I
-    I --> L{Displaying fullscreen video found?}
-    L -->|yes| M[webkitExitFullscreen]
-    M --> K
-    L -->|no| N([Throw NotSupportedError])
+    A([Fullscreen.exit called]) --> B{api available?}
+    B -->|yes| C[Call document api.exit]
+    B -->|no| D[fallbackToIOSVideo]
+    C --> E{Promise returned?}
+    E -->|yes| F{Resolved?}
+    F -->|yes| G([resolve])
+    F -->|no| D
+    E -->|no| G
+    D --> H{iOS + displaying fullscreen video found?}
+    H -->|yes| I[webkitExitFullscreen]
+    I --> G
+    H -->|no| J{getElement null?}
+    J -->|yes| G
+    J -->|no| K([Throw NotSupportedError])
             `,
             example: `
 await Native.fullscreen.exit();
@@ -2037,31 +2104,16 @@ await Native.fullscreen.exit();
             throws: [`throw new NotSupportedError // failed to exit fullscreen`],
             tryItOut: TRY_IT_OUT.fullscreen.exit,
         },
-        toggle: {
-            signature: `toggle(target?: Element, options?: FullscreenOptions): Promise<void>`,
-            description: `Toggles fullscreen on or off.`,
-            example: `
-// Toggle on button click
-btn.addEventListener('click', () => Native.fullscreen.toggle());
-
-// Toggle a specific element
-btn.addEventListener('click', () => {
-    Native.fullscreen.toggle(document.getElementById('player'));
-});
-            `,
-            returns: {type: `Promise<void>`},
-            throws: [`throw new NotSupportedError // propagated from request() or exit()`],
-            tryItOut: TRY_IT_OUT.fullscreen.toggle,
-        },
         onChange: {
-            signature: `onChange(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void`,
+            signature: `onChange(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void`,
             description: `Subscribes to fullscreen state changes.`,
             example: `
-const unsubscribe = Native.fullscreen.onChange(() => {
-    console.log('isFullscreen:', Native.fullscreen.isFullscreen);
-    console.log('element:', Native.fullscreen.element);
+const unsubscribe = Native.fullscreen.onChange((payload) => {
+    console.log(payload.isFullscreen); // true | false
+    console.log(payload.element);      // Element
+    console.log(payload.nativeEvent);  // Event
 });
-
+ 
 unsubscribe();
             `,
             returns: {
@@ -2072,13 +2124,15 @@ unsubscribe();
             tryItOut: TRY_IT_OUT.fullscreen.onChange,
         },
         onError: {
-            signature: `onError(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void`,
+            signature: `onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void`,
             description: `Subscribes to fullscreen errors.`,
             example: `
-const unsubscribe = Native.fullscreen.onError((event) => {
-    console.error('Fullscreen error:', event);
+const unsubscribe = Native.fullscreen.onError((payload) => {
+    console.log(payload.isFullscreen); // boolean
+    console.log(payload.element);      // Element
+    console.log(payload.nativeEvent);  // Event
 });
-
+ 
 unsubscribe();
             `,
             returns: {
@@ -2091,6 +2145,23 @@ unsubscribe();
     },
 
     geolocation: {
+        supported: {
+            signature: `get supported(): boolean`,
+            description: `Returns whether geolocation is supported in the current environment.`,
+            example: `
+if (Native.geolocation.supported) {
+    const coords = await Native.geolocation.value;
+
+    console.log(coords.latitude, coords.longitude);
+}
+            `,
+            returns: {
+                type: `boolean`,
+                description: `// true  — geolocation API support,
+// false — no geolocation support`,
+            },
+            throws: [],
+        },
         value: {
             signature: `get value(): Promise<GeolocationCoordinates>`,
             description: `Returns the current geographic coordinates. Falls back to IP-based location if the Geolocation API is unavailable or permission is denied.`,
@@ -2154,6 +2225,25 @@ unsubscribe();
     },
 
     notification: {
+        supported: {
+            signature: `get supported(): boolean`,
+            description: `Returns whether notification is supported in the current environment.`,
+            example: `
+if (Native.notification.supported) {
+    await Native.notification.send({
+        title: 'Hello',
+        body:  'You have a new message.',
+        icon:  '/icon.png',
+    });
+}
+            `,
+            returns: {
+                type: `boolean`,
+                description: `// true  — notification API support,
+// false — no notification support`,
+            },
+            throws: [],
+        },
         send: {
             signature: `send(options: NotificationOptions): Promise<Notification>`,
             description: `Sends a native notification after requesting permission.`,
@@ -2523,6 +2613,21 @@ Native.open.calendar({
     },
 
     permission: {
+        supported: {
+            signature: `get supported(): boolean`,
+            description: `Returns whether permission is supported in the current environment.`,
+            example: `
+if (Native.permission.supported) {
+    const state = await Native.permission.check(PermissionType.Geolocation);
+}
+            `,
+            returns: {
+                type: `boolean`,
+                description: `// true  — permission API support,
+// false — no permission support`,
+            },
+            throws: [],
+        },
         request: {
             signature: `request(type: PermissionType): Promise<PermissionState>`,
             description: `Requests a permission. Resolves immediately if already granted.`,
@@ -2603,51 +2708,109 @@ if (state === PermissionState.Grant) {
     },
 
     pip: {
+        supported: {
+            signature: `get supported(): boolean`,
+            description: `Returns whether Picture-in-Picture is supported in the current environment.`,
+            example: `
+if (Native.pip.supported) {
+    await Native.pip.request();
+}
+            `,
+            returns: {
+                type: `boolean`,
+                description: `// true  — document.pictureInPictureEnabled is true,
+//         or a video with webkitSupportsPresentationMode('picture-in-picture') exists
+// false — no PiP support`,
+            },
+            throws: [],
+        },
+        element: {
+            signature: `get element(): HTMLVideoElement | null`,
+            description: `Returns the video element currently in Picture-in-Picture, or null if not active.`,
+            example: `
+const el = Native.pip.element;
+ 
+if (el !== null) {
+    console.log(el.src); // currently PiP video source
+}
+            `,
+            returns: {
+                type: `HTMLVideoElement | null`,
+                description: `// HTMLVideoElement — the current PiP video
+// null            — not in PiP`,
+            },
+            throws: [],
+        },
+        isPip: {
+            signature: `get isPip(): boolean`,
+            description: `Returns whether Picture-in-Picture is currently active.`,
+            example: `
+console.log(Native.pip.isPip); // true | false
+            `,
+            returns: {type: `boolean`},
+            throws: [],
+        },
         request: {
             signature: `request(target?: HTMLVideoElement): Promise<void>`,
-            description: `Requests Picture-in-Picture for a video element. Concurrent calls are queued (FIFO).`,
+            description: `Requests Picture-in-Picture for a video element.`,
             flowchart: `
 flowchart TD
-    A([Pip.request called]) --> B[Set lastIntendedOperation to request]
-    B --> C{activeOperation in progress?}
-    C -->|no| D[requestImmediately]
-    C -->|yes| E[Push to pendingQueue]
-    D --> F{target is video element?}
-    F -->|no| Z([Throw NotSupportedError])
-    F -->|yes| G{requestPictureInPicture available?}
-    G -->|yes| H[Call video.requestPictureInPicture]
-    G -->|no| I[fallbackToWebkitVideo]
-    H --> J{Resolved?}
-    J -->|yes| K([resolve])
-    J -->|no| I
-    I --> L{webkitSupportsPresentationMode PIP?}
-    L -->|yes| M[webkitSetPresentationMode picture-in-picture]
-    M --> K
-    L -->|no| N([Throw NotSupportedError])
-    D --> O[drainPendingOperation on settle]
+    A([Pip.request called]) --> B{target defined?}
+    B -->|no| C[getDefaultTarget]
+    B -->|yes| D{target is video element?}
+    C --> D
+    D -->|no| Z([Throw NotSupportedError])
+    D -->|yes| E{requestPictureInPicture available?}
+    E -->|yes| F[Call video.requestPictureInPicture]
+    E -->|no| G[fallbackToWebkit]
+    F --> H{Promise returned?}
+    H -->|yes| I{Resolved?}
+    I -->|yes| J([resolve])
+    I -->|no| G
+    H -->|no| J
+    G --> K{webkitSupportsPresentationMode PIP?}
+    K -->|yes| L[webkitSetPresentationMode picture-in-picture]
+    L --> J
+    K -->|no| M([Throw NotSupportedError])
             `,
             example: `
 // Default: first video element
 await Native.pip.request();
-
+ 
 // Specific video element
 await Native.pip.request(document.querySelector('video#player'));
-
-// Concurrent calls — safely queued, not dropped
-Native.pip.request(document.querySelector('video#a'));
-Native.pip.request(document.querySelector('video#b'));
             `,
             returns: {type: `Promise<void>`},
             throws: [
                 `throw new NotSupportedError // target is not a video element`,
                 `throw new NotSupportedError // PiP disabled on this element (disablePictureInPicture)`,
                 `throw new NotSupportedError // requestPictureInPicture and webkitSetPresentationMode both unavailable`,
+                `throw new InvalidStateError // PiP transition already in progress`,
             ],
             tryItOut: TRY_IT_OUT.pip.request,
         },
         exit: {
             signature: `exit(): Promise<void>`,
-            description: `Exits Picture-in-Picture. Concurrent calls are queued (FIFO).`,
+            description: `Exits Picture-in-Picture.`,
+            flowchart: `
+flowchart TD
+    A([Pip.exit called]) --> B{exitPictureInPicture available?}
+    B -->|yes| C[Call document.exitPictureInPicture]
+    B -->|no| D[fallbackToWebkit]
+    C --> E{Promise returned?}
+    E -->|yes| F{Resolved?}
+    F -->|yes| G([resolve])
+    F -->|no| D
+    E -->|no| G
+    D --> H{webkit PiP video found?}
+    H -->|yes| I[webkitSetPresentationMode inline]
+    I --> G
+    H -->|no| J{any video in PIP mode found?}
+    J -->|yes| I
+    J -->|no| K{pictureInPictureElement null?}
+    K -->|yes| G
+    K -->|no| L([Throw NotSupportedError])
+            `,
             example: `
 await Native.pip.exit();
             `,
@@ -2655,31 +2818,16 @@ await Native.pip.exit();
             throws: [`throw new NotSupportedError // failed to exit PiP`],
             tryItOut: TRY_IT_OUT.pip.exit,
         },
-        toggle: {
-            signature: `toggle(target?: HTMLVideoElement): Promise<void>`,
-            description: `Toggles Picture-in-Picture on or off.`,
-            example: `
-// Toggle on button click
-btn.addEventListener('click', () => Native.pip.toggle());
-
-// Toggle a specific video element
-btn.addEventListener('click', () => {
-    Native.pip.toggle(document.querySelector('video#player'));
-});
-            `,
-            returns: {type: `Promise<void>`},
-            throws: [`throw new NotSupportedError // propagated from request() or exit()`],
-            tryItOut: TRY_IT_OUT.pip.toggle,
-        },
         onChange: {
-            signature: `onChange(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void`,
+            signature: `onChange(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void`,
             description: `Subscribes to Picture-in-Picture state changes.`,
             example: `
-const unsubscribe = Native.pip.onChange(() => {
-    console.log('isPip:', Native.pip.isPip);
-    console.log('element:', Native.pip.element);
+const unsubscribe = Native.pip.onChange((payload) => {
+    console.log(payload.isPip);       // true | false
+    console.log(payload.element);     // HTMLVideoElement
+    console.log(payload.nativeEvent); // Event
 });
-
+ 
 unsubscribe();
             `,
             returns: {
@@ -2690,13 +2838,15 @@ unsubscribe();
             tryItOut: TRY_IT_OUT.pip.onChange,
         },
         onError: {
-            signature: `onError(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void`,
+            signature: `onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void`,
             description: `Subscribes to Picture-in-Picture errors.`,
             example: `
-const unsubscribe = Native.pip.onError((event) => {
-    console.error('PiP error:', event);
+const unsubscribe = Native.pip.onError((payload) => {
+    console.log(payload.isPip);       // boolean
+    console.log(payload.element);     // HTMLVideoElement
+    console.log(payload.nativeEvent); // Event
 });
-
+ 
 unsubscribe();
             `,
             returns: {
@@ -2957,6 +3107,21 @@ Native.theme.value = undefined;
     },
 
     vibration: {
+        supported: {
+            signature: `get supported(): boolean`,
+            description: `Returns whether vibration is supported in the current environment.`,
+            example: `
+if (Native.vibration.supported) {
+    Native.vibration.run([100, 50, 200]);
+}
+            `,
+            returns: {
+                type: `boolean`,
+                description: `// true  — vibration API support,
+// false — no vibration support`,
+            },
+            throws: [],
+        },
         run: {
             signature: `run(pattern: number | number[]): boolean`,
             description: `Triggers device vibration. Pass a number for a single pulse or an array to define a pattern.`,
@@ -2991,6 +3156,11 @@ Native.vibration.stop();
 };
 
 const CHANGELOG = {
+    "1.2.0": [
+        "Fix Promise deadlock in Native.pip.request and Native.pip.exit caused by concurrent calls during PiP transition animation",
+        "Fix Promise deadlock in Native.fullscreen.request and Native.fullscreen.exit caused by concurrent calls during fullscreen transition animation",
+        "Add PipEventPayload and FullscreenEventPayload — onChange and onError listeners now receive structured payloads instead of raw Event",
+    ],
     "1.1.9": ["Update README.md"],
     "1.1.8": ["Fix type mismatch in Contact that did not reflect actual values"],
     "1.1.7": ["Add clipboard-read permission type to Native.permission"],
@@ -3133,15 +3303,15 @@ export function generateMarkdown(docs: Documents): string {
     const lines: string[] = [];
 
     lines.push("# native-fn API Reference");
-    lines.push("![NPM](https://nodei.co/npm/native-fn.png?downloads=true&downloadRank=true&stars=true)<br>");
+    lines.push("<a href=\"https://www.npmjs.com/package/native-fn\">![NPM Version](https://nodei.co/npm/native-fn.png?downloads=true&downloadRank=true&stars=true)</a><br/>");
     lines.push("<a href=\"https://www.npmjs.com/package/native-fn\">![NPM Downloads](https://img.shields.io/npm/d18m/native-fn?style=flat&logo=npm&logoColor=%23CB3837&label=Download&color=%23CB3837&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Fnative-fn)</a>");
     lines.push("<a href=\"https://www.npmjs.com/package/native-fn\">![GitHub Repo stars](https://img.shields.io/github/stars/pjy0509/native-fn?style=flat&logo=github&logoColor=181717&label=Stars&color=181717&link=https%3A%2F%2Fgithub.com%2Fpjy0509%2Fnative-fn)</a>");
-    lines.push("<a href=\"https://github.com/pjy0509/native-fn.git\">![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)</a>");
+    lines.push("<a href=\"https://github.com/pjy0509/native-fn\">![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)</a>");
     lines.push("<br/>");
-    lines.push("<a href=\"https://www.jsdelivr.com/package/npm/native-fn\" target=\"_blank\"><img alt=\"jsDelivr\" src=\"http://www.google.com/s2/favicons?domain=www.jsdelivr.com/\"></a>");
-    lines.push("<a href=\"https://www.npmjs.com/package/native-fn\" target=\"_blank\"><img alt=\"npm\" src=\"http://www.google.com/s2/favicons?domain=www.npmjs.com/\"></a>");
-    lines.push("<a href=\"https://github.com/pjy0509/native-fn.git\" target=\"_blank\"><img alt=\"repository\" src=\"http://www.google.com/s2/favicons?domain=https://github.com/pjy0509/native-fn.git/\"></a>");
-    // lines.push("<a href=\"https://pjy0509.github.io/example/native-fn/\" target=\"_blank\"><img alt=\"homepage\" src=\"http://www.google.com/s2/favicons?domain=https://pjy0509.github.io/example/native-fn//\"></a>");
+    lines.push("<a href=\"https://www.jsdelivr.com/package/npm/native-fn\" target=\"_blank\"><img alt=\"jsDelivr\" src=\"https://www.google.com/s2/favicons?sz=16&domain=www.jsdelivr.com/\"></a>");
+    lines.push("<a href=\"https://www.npmjs.com/package/native-fn\" target=\"_blank\"><img alt=\"npm\" src=\"https://www.google.com/s2/favicons?sz=16&domain=www.npmjs.com/\"></a>");
+    lines.push("<a href=\"https://github.com/pjy0509/native-fn\" target=\"_blank\"><img alt=\"repository\" src=\"https://www.google.com/s2/favicons?sz=16&domain=https://github.com/pjy0509/native-fn.git/\"></a>");
+    // lines.push("<a href=\"https://pjy0509.github.io/example/native-fn/\" target=\"_blank\"><img alt=\"homepage\" src=\"https://www.google.com/s2/favicons?sz=16&domain=https://pjy0509.github.io/example/native-fn//\"></a>");
 
     lines.push("## Installation");
     lines.push("");
@@ -3157,7 +3327,7 @@ export function generateMarkdown(docs: Documents): string {
     lines.push("yarn add native-fn");
     lines.push("```");
     lines.push("");
-    lines.push("**cdnjs**");
+    lines.push("**unpkg**");
     lines.push("");
     lines.push("```html");
     lines.push("<script src=\"https://unpkg.com/native-fn\"></script>");

@@ -351,11 +351,11 @@ function createSubscriptionManager(attach, detach) {
 var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
 var batteryRef = null;
 var Battery = {
-    get value() {
-        return getValue();
-    },
     get supported() {
         return supported();
+    },
+    get value() {
+        return getValue();
     },
     onChange: onChangeSubscriptionManager.subscribe,
     Constants: {},

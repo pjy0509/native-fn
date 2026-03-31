@@ -2,11 +2,11 @@ import {BadgeInstance} from "../types";
 import {NotSupportedError} from "../../../errors/not-supported-error";
 
 const Badge: BadgeInstance = {
-    set: set,
-    clear: clear,
     get supported(): boolean {
         return supported();
     },
+    set: set,
+    clear: clear,
     Constants: {},
     Errors: {
         NotSupportedError: NotSupportedError,

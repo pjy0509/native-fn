@@ -2,6 +2,29 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+function compareVersion(lhs, rhs) {
+    var pa = lhs.split('.');
+    var pb = rhs.split('.');
+    var length = Math.max(pa.length, pb.length);
+    for (var i = 0; i < length; i++) {
+        var a = void 0;
+        var b = void 0;
+        if (i < pa.length)
+            a = parseInt(pa[i], 10);
+        else
+            a = 0;
+        if (i < pb.length)
+            b = parseInt(pb[i], 10);
+        else
+            b = 0;
+        if (a > b)
+            return 1;
+        if (a < b)
+            return -1;
+    }
+    return 0;
+}
+
 function resolveWindowsVersion(string) {
     if (typeof string === 'undefined')
         return '';
@@ -139,126 +162,6 @@ var BROWSER_RESOLVER_MAP = [
     [/mobile vr; rv:([\w.]+)\).+firefox/i, Browsers.Firefox],
     [/firefox\/([\w.]+)/i, Browsers.Firefox],
 ];
-
-var _a, _b, _c, _d, _e;
-exports.AppOpenState = void 0;
-(function (AppOpenState) {
-    AppOpenState[AppOpenState["Scheme"] = 0] = "Scheme";
-    AppOpenState[AppOpenState["Universal"] = 1] = "Universal";
-    AppOpenState[AppOpenState["Intent"] = 2] = "Intent";
-    AppOpenState[AppOpenState["Fallback"] = 3] = "Fallback";
-    AppOpenState[AppOpenState["Store"] = 4] = "Store";
-})(exports.AppOpenState || (exports.AppOpenState = {}));
-exports.SettingType = void 0;
-(function (SettingType) {
-    SettingType["General"] = "general";
-    SettingType["Network"] = "network";
-    SettingType["Display"] = "display";
-    SettingType["Appearance"] = "appearance";
-    SettingType["Accessibility"] = "accessibility";
-    SettingType["Battery"] = "battery";
-    SettingType["Datetime"] = "datetime";
-    SettingType["Language"] = "language";
-    SettingType["Accounts"] = "accounts";
-    SettingType["Storage"] = "storage";
-})(exports.SettingType || (exports.SettingType = {}));
-exports.CameraType = void 0;
-(function (CameraType) {
-    CameraType["Image"] = "image";
-    CameraType["Video"] = "video";
-})(exports.CameraType || (exports.CameraType = {}));
-exports.CaptureType = void 0;
-(function (CaptureType) {
-    CaptureType["User"] = "user";
-    CaptureType["Environment"] = "environment";
-})(exports.CaptureType || (exports.CaptureType = {}));
-exports.ExplorerStartIn = void 0;
-(function (ExplorerStartIn) {
-    ExplorerStartIn["Desktop"] = "desktop";
-    ExplorerStartIn["Documents"] = "documents";
-    ExplorerStartIn["Downloads"] = "downloads";
-    ExplorerStartIn["Music"] = "music";
-    ExplorerStartIn["Pictures"] = "pictures";
-    ExplorerStartIn["Videos"] = "videos";
-})(exports.ExplorerStartIn || (exports.ExplorerStartIn = {}));
-exports.DirectoryExploreMode = void 0;
-(function (DirectoryExploreMode) {
-    DirectoryExploreMode["Read"] = "read";
-    DirectoryExploreMode["ReadWrite"] = "readwrite";
-})(exports.DirectoryExploreMode || (exports.DirectoryExploreMode = {}));
-var SETTING_URL = (_a = {},
-    _a[OS.Android] = (_b = {},
-        _b[exports.SettingType.General] = 'intent:#Intent;action=android.settings.SETTINGS;end',
-        _b[exports.SettingType.Network] = 'intent:#Intent;action=android.settings.WIFI_SETTINGS;end',
-        _b[exports.SettingType.Display] = 'intent:#Intent;action=android.settings.DISPLAY_SETTINGS;end',
-        _b[exports.SettingType.Appearance] = 'intent:#Intent;action=android.settings.DISPLAY_SETTINGS;end',
-        _b[exports.SettingType.Accessibility] = 'intent:#Intent;action=android.settings.ACCESSIBILITY_SETTINGS;end',
-        _b[exports.SettingType.Battery] = 'intent:#Intent;action=android.settings.BATTERY_SAVER_SETTINGS;end',
-        _b[exports.SettingType.Datetime] = 'intent:#Intent;action=android.settings.DATE_SETTINGS;end',
-        _b[exports.SettingType.Language] = 'intent:#Intent;action=android.settings.LOCALE_SETTINGS;end',
-        _b[exports.SettingType.Accounts] = 'intent:#Intent;action=android.settings.SYNC_SETTINGS;end',
-        _b[exports.SettingType.Storage] = 'intent:#Intent;action=android.settings.INTERNAL_STORAGE_SETTINGS;end',
-        _b),
-    _a[OS.Windows] = (_c = {},
-        _c[exports.SettingType.General] = 'ms-settings:system',
-        _c[exports.SettingType.Network] = 'ms-settings:network',
-        _c[exports.SettingType.Display] = 'ms-settings:display',
-        _c[exports.SettingType.Appearance] = 'ms-settings:colors',
-        _c[exports.SettingType.Accessibility] = 'ms-settings:easeofaccess',
-        _c[exports.SettingType.Battery] = 'ms-settings:batterysaver',
-        _c[exports.SettingType.Datetime] = 'ms-settings:dateandtime',
-        _c[exports.SettingType.Language] = 'ms-settings:regionlanguage',
-        _c[exports.SettingType.Accounts] = 'ms-settings:emailandaccounts',
-        _c[exports.SettingType.Storage] = 'ms-settings:storagesense',
-        _c),
-    _a[OS.MacOS] = (_d = {},
-        _d[exports.SettingType.General] = 'x-apple.systempreferences:',
-        _d[exports.SettingType.Network] = 'x-apple.systempreferences:com.apple.preference.network',
-        _d[exports.SettingType.Display] = 'x-apple.systempreferences:com.apple.preference.displays',
-        _d[exports.SettingType.Appearance] = 'x-apple.systempreferences:com.apple.preference.general',
-        _d[exports.SettingType.Accessibility] = 'x-apple.systempreferences:com.apple.preference.universalaccess',
-        _d[exports.SettingType.Battery] = 'x-apple.systempreferences:com.apple.preference.energysaver',
-        _d[exports.SettingType.Datetime] = 'x-apple.systempreferences:com.apple.preference.datetime',
-        _d[exports.SettingType.Language] = 'x-apple.systempreferences:com.apple.Localization',
-        _d[exports.SettingType.Accounts] = 'x-apple.systempreferences:com.apple.preferences.internetaccounts',
-        _d[exports.SettingType.Storage] = 'x-apple.systempreferences:',
-        _d),
-    _a['MacOS13+'] = (_e = {},
-        _e[exports.SettingType.General] = 'x-apple.systempreferences:com.apple.General-Settings.extension',
-        _e[exports.SettingType.Network] = 'x-apple.systempreferences:com.apple.Network-Settings.extension',
-        _e[exports.SettingType.Display] = 'x-apple.systempreferences:com.apple.Displays-Settings.extension',
-        _e[exports.SettingType.Appearance] = 'x-apple.systempreferences:com.apple.Appearance-Settings.extension',
-        _e[exports.SettingType.Accessibility] = 'x-apple.systempreferences:com.apple.Accessibility-Settings.extension',
-        _e[exports.SettingType.Battery] = 'x-apple.systempreferences:com.apple.Battery-Settings.extension',
-        _e[exports.SettingType.Datetime] = 'x-apple.systempreferences:com.apple.Date-Time-Settings.extension',
-        _e[exports.SettingType.Language] = 'x-apple.systempreferences:com.apple.Localization-Settings.extension',
-        _e[exports.SettingType.Accounts] = 'x-apple.systempreferences:com.apple.Internet-Accounts-Settings.extension',
-        _e[exports.SettingType.Storage] = 'x-apple.systempreferences:com.apple.settings.Storage',
-        _e),
-    _a);
-
-function compareVersion(lhs, rhs) {
-    var pa = lhs.split('.');
-    var pb = rhs.split('.');
-    var length = Math.max(pa.length, pb.length);
-    for (var i = 0; i < length; i++) {
-        var a = void 0;
-        var b = void 0;
-        if (i < pa.length)
-            a = parseInt(pa[i], 10);
-        else
-            a = 0;
-        if (i < pb.length)
-            b = parseInt(pb[i], 10);
-        else
-            b = 0;
-        if (a > b)
-            return 1;
-        if (a < b)
-            return -1;
-    }
-    return 0;
-}
 
 var IE_WRAPPER_STORE = [];
 var MEDIA_QUERY_LIST_WRAPPER_STORE = [];
@@ -692,6 +595,103 @@ var Platform = {
     get isWebview() {
         return getIsWebview();
     }};
+
+var _a, _b, _c, _d, _e;
+exports.AppOpenState = void 0;
+(function (AppOpenState) {
+    AppOpenState[AppOpenState["Scheme"] = 0] = "Scheme";
+    AppOpenState[AppOpenState["Universal"] = 1] = "Universal";
+    AppOpenState[AppOpenState["Intent"] = 2] = "Intent";
+    AppOpenState[AppOpenState["Fallback"] = 3] = "Fallback";
+    AppOpenState[AppOpenState["Store"] = 4] = "Store";
+})(exports.AppOpenState || (exports.AppOpenState = {}));
+exports.SettingType = void 0;
+(function (SettingType) {
+    SettingType["General"] = "general";
+    SettingType["Network"] = "network";
+    SettingType["Display"] = "display";
+    SettingType["Appearance"] = "appearance";
+    SettingType["Accessibility"] = "accessibility";
+    SettingType["Battery"] = "battery";
+    SettingType["Datetime"] = "datetime";
+    SettingType["Language"] = "language";
+    SettingType["Accounts"] = "accounts";
+    SettingType["Storage"] = "storage";
+})(exports.SettingType || (exports.SettingType = {}));
+exports.CameraType = void 0;
+(function (CameraType) {
+    CameraType["Image"] = "image";
+    CameraType["Video"] = "video";
+})(exports.CameraType || (exports.CameraType = {}));
+exports.CaptureType = void 0;
+(function (CaptureType) {
+    CaptureType["User"] = "user";
+    CaptureType["Environment"] = "environment";
+})(exports.CaptureType || (exports.CaptureType = {}));
+exports.ExplorerStartIn = void 0;
+(function (ExplorerStartIn) {
+    ExplorerStartIn["Desktop"] = "desktop";
+    ExplorerStartIn["Documents"] = "documents";
+    ExplorerStartIn["Downloads"] = "downloads";
+    ExplorerStartIn["Music"] = "music";
+    ExplorerStartIn["Pictures"] = "pictures";
+    ExplorerStartIn["Videos"] = "videos";
+})(exports.ExplorerStartIn || (exports.ExplorerStartIn = {}));
+exports.DirectoryExploreMode = void 0;
+(function (DirectoryExploreMode) {
+    DirectoryExploreMode["Read"] = "read";
+    DirectoryExploreMode["ReadWrite"] = "readwrite";
+})(exports.DirectoryExploreMode || (exports.DirectoryExploreMode = {}));
+var SETTING_URL = (_a = {},
+    _a[OS.Android] = (_b = {},
+        _b[exports.SettingType.General] = 'intent:#Intent;action=android.settings.SETTINGS;end',
+        _b[exports.SettingType.Network] = 'intent:#Intent;action=android.settings.WIFI_SETTINGS;end',
+        _b[exports.SettingType.Display] = 'intent:#Intent;action=android.settings.DISPLAY_SETTINGS;end',
+        _b[exports.SettingType.Appearance] = 'intent:#Intent;action=android.settings.DISPLAY_SETTINGS;end',
+        _b[exports.SettingType.Accessibility] = 'intent:#Intent;action=android.settings.ACCESSIBILITY_SETTINGS;end',
+        _b[exports.SettingType.Battery] = 'intent:#Intent;action=android.settings.BATTERY_SAVER_SETTINGS;end',
+        _b[exports.SettingType.Datetime] = 'intent:#Intent;action=android.settings.DATE_SETTINGS;end',
+        _b[exports.SettingType.Language] = 'intent:#Intent;action=android.settings.LOCALE_SETTINGS;end',
+        _b[exports.SettingType.Accounts] = 'intent:#Intent;action=android.settings.SYNC_SETTINGS;end',
+        _b[exports.SettingType.Storage] = 'intent:#Intent;action=android.settings.INTERNAL_STORAGE_SETTINGS;end',
+        _b),
+    _a[OS.Windows] = (_c = {},
+        _c[exports.SettingType.General] = 'ms-settings:system',
+        _c[exports.SettingType.Network] = 'ms-settings:network',
+        _c[exports.SettingType.Display] = 'ms-settings:display',
+        _c[exports.SettingType.Appearance] = 'ms-settings:colors',
+        _c[exports.SettingType.Accessibility] = 'ms-settings:easeofaccess',
+        _c[exports.SettingType.Battery] = 'ms-settings:batterysaver',
+        _c[exports.SettingType.Datetime] = 'ms-settings:dateandtime',
+        _c[exports.SettingType.Language] = 'ms-settings:regionlanguage',
+        _c[exports.SettingType.Accounts] = 'ms-settings:emailandaccounts',
+        _c[exports.SettingType.Storage] = 'ms-settings:storagesense',
+        _c),
+    _a[OS.MacOS] = (_d = {},
+        _d[exports.SettingType.General] = 'x-apple.systempreferences:',
+        _d[exports.SettingType.Network] = 'x-apple.systempreferences:com.apple.preference.network',
+        _d[exports.SettingType.Display] = 'x-apple.systempreferences:com.apple.preference.displays',
+        _d[exports.SettingType.Appearance] = 'x-apple.systempreferences:com.apple.preference.general',
+        _d[exports.SettingType.Accessibility] = 'x-apple.systempreferences:com.apple.preference.universalaccess',
+        _d[exports.SettingType.Battery] = 'x-apple.systempreferences:com.apple.preference.energysaver',
+        _d[exports.SettingType.Datetime] = 'x-apple.systempreferences:com.apple.preference.datetime',
+        _d[exports.SettingType.Language] = 'x-apple.systempreferences:com.apple.Localization',
+        _d[exports.SettingType.Accounts] = 'x-apple.systempreferences:com.apple.preferences.internetaccounts',
+        _d[exports.SettingType.Storage] = 'x-apple.systempreferences:',
+        _d),
+    _a['MacOS13+'] = (_e = {},
+        _e[exports.SettingType.General] = 'x-apple.systempreferences:com.apple.General-Settings.extension',
+        _e[exports.SettingType.Network] = 'x-apple.systempreferences:com.apple.Network-Settings.extension',
+        _e[exports.SettingType.Display] = 'x-apple.systempreferences:com.apple.Displays-Settings.extension',
+        _e[exports.SettingType.Appearance] = 'x-apple.systempreferences:com.apple.Appearance-Settings.extension',
+        _e[exports.SettingType.Accessibility] = 'x-apple.systempreferences:com.apple.Accessibility-Settings.extension',
+        _e[exports.SettingType.Battery] = 'x-apple.systempreferences:com.apple.Battery-Settings.extension',
+        _e[exports.SettingType.Datetime] = 'x-apple.systempreferences:com.apple.Date-Time-Settings.extension',
+        _e[exports.SettingType.Language] = 'x-apple.systempreferences:com.apple.Localization-Settings.extension',
+        _e[exports.SettingType.Accounts] = 'x-apple.systempreferences:com.apple.Internet-Accounts-Settings.extension',
+        _e[exports.SettingType.Storage] = 'x-apple.systempreferences:com.apple.settings.Storage',
+        _e),
+    _a);
 
 function getTopmostWindow() {
     try {

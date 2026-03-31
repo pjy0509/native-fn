@@ -3,8 +3,8 @@ declare const NotSupportedError: ErrorConstructor;
 declare const PermissionNotGrantedError: ErrorConstructor;
 
 declare interface GeolocationInstance {
-    get value(): Promise<GeolocationCoordinates>;
     get supported(): boolean;
+    get value(): Promise<GeolocationCoordinates>;
     onChange(listener: (coordinates: GeolocationCoordinates) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {

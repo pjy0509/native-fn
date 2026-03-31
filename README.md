@@ -1,12 +1,12 @@
 # native-fn API Reference
-![NPM](https://nodei.co/npm/native-fn.png?downloads=true&downloadRank=true&stars=true)<br>
+<a href="https://www.npmjs.com/package/native-fn">![NPM Version](https://nodei.co/npm/native-fn.png?downloads=true&downloadRank=true&stars=true)</a><br/>
 <a href="https://www.npmjs.com/package/native-fn">![NPM Downloads](https://img.shields.io/npm/d18m/native-fn?style=flat&logo=npm&logoColor=%23CB3837&label=Download&color=%23CB3837&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Fnative-fn)</a>
 <a href="https://www.npmjs.com/package/native-fn">![GitHub Repo stars](https://img.shields.io/github/stars/pjy0509/native-fn?style=flat&logo=github&logoColor=181717&label=Stars&color=181717&link=https%3A%2F%2Fgithub.com%2Fpjy0509%2Fnative-fn)</a>
-<a href="https://github.com/pjy0509/native-fn.git">![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)</a>
+<a href="https://github.com/pjy0509/native-fn">![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)</a>
 <br/>
-<a href="https://www.jsdelivr.com/package/npm/native-fn" target="_blank"><img alt="jsDelivr" src="http://www.google.com/s2/favicons?domain=www.jsdelivr.com/"></a>
-<a href="https://www.npmjs.com/package/native-fn" target="_blank"><img alt="npm" src="http://www.google.com/s2/favicons?domain=www.npmjs.com/"></a>
-<a href="https://github.com/pjy0509/native-fn.git" target="_blank"><img alt="repository" src="http://www.google.com/s2/favicons?domain=https://github.com/pjy0509/native-fn.git/"></a>
+<a href="https://www.jsdelivr.com/package/npm/native-fn" target="_blank"><img alt="jsDelivr" src="https://www.google.com/s2/favicons?sz=16&domain=www.jsdelivr.com/"></a>
+<a href="https://www.npmjs.com/package/native-fn" target="_blank"><img alt="npm" src="https://www.google.com/s2/favicons?sz=16&domain=www.npmjs.com/"></a>
+<a href="https://github.com/pjy0509/native-fn" target="_blank"><img alt="repository" src="https://www.google.com/s2/favicons?sz=16&domain=https://github.com/pjy0509/native-fn.git/"></a>
 ## Installation
 
 **npm**
@@ -21,7 +21,7 @@ npm i native-fn
 yarn add native-fn
 ```
 
-**cdnjs**
+**unpkg**
 
 ```html
 <script src="https://unpkg.com/native-fn"></script>
@@ -39,9 +39,11 @@ yarn add native-fn
     - [value](#appearance-value)
     - [onChange](#appearance-onchange)
 - **[badge](#badge)**
+    - [supported](#badge-supported)
     - [set](#badge-set)
     - [clear](#badge-clear)
 - **[battery](#battery)**
+    - [supported](#battery-supported)
     - [value](#battery-value)
     - [onChange](#battery-onchange)
 - **[clipboard](#clipboard)**
@@ -52,15 +54,19 @@ yarn add native-fn
     - [environment](#dimension-environment)
     - [onChange](#dimension-onchange)
 - **[fullscreen](#fullscreen)**
+    - [supported](#fullscreen-supported)
+    - [element](#fullscreen-element)
+    - [isFullscreen](#fullscreen-isfullscreen)
     - [request](#fullscreen-request)
     - [exit](#fullscreen-exit)
-    - [toggle](#fullscreen-toggle)
     - [onChange](#fullscreen-onchange)
     - [onError](#fullscreen-onerror)
 - **[geolocation](#geolocation)**
+    - [supported](#geolocation-supported)
     - [value](#geolocation-value)
     - [onChange](#geolocation-onchange)
 - **[notification](#notification)**
+    - [supported](#notification-supported)
     - [send](#notification-send)
 - **[open](#open)**
     - [app](#open-app)
@@ -75,12 +81,15 @@ yarn add native-fn
     - [share](#open-share)
     - [calendar](#open-calendar)
 - **[permission](#permission)**
+    - [supported](#permission-supported)
     - [request](#permission-request)
     - [check](#permission-check)
 - **[pip](#pip)**
+    - [supported](#pip-supported)
+    - [element](#pip-element)
+    - [isPip](#pip-ispip)
     - [request](#pip-request)
     - [exit](#pip-exit)
-    - [toggle](#pip-toggle)
     - [onChange](#pip-onchange)
     - [onError](#pip-onerror)
 - **[platform](#platform)**
@@ -98,6 +107,7 @@ yarn add native-fn
 - **[theme](#theme)**
     - [value](#theme-value)
 - **[vibration](#vibration)**
+    - [supported](#vibration-supported)
     - [run](#vibration-run)
     - [stop](#vibration-stop)
 
@@ -174,7 +184,39 @@ unsubscribe();
 
 ## badge
 
-[`set`](#badge-set) · [`clear`](#badge-clear)
+[`supported`](#badge-supported) · [`set`](#badge-set) · [`clear`](#badge-clear)
+
+<h3 id="badge-supported"><code>badge.supported</code></h3>
+
+**Signature**
+
+```ts
+get supported(): boolean
+```
+
+Returns whether badge is supported in the current environment.
+
+**Example**
+
+```ts
+if (Native.badge.supported) {
+    await Native.badge.set(5);
+}
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+```ts
+// true  — badge API support,
+// false — no badge support
+```
+
+---
 
 <h3 id="badge-set"><code>badge.set</code></h3>
 
@@ -240,7 +282,41 @@ throw new NotSupportedError // navigator.setAppBadge unavailable
 
 ## battery
 
-[`value`](#battery-value) · [`onChange`](#battery-onchange)
+[`supported`](#battery-supported) · [`value`](#battery-value) · [`onChange`](#battery-onchange)
+
+<h3 id="battery-supported"><code>battery.supported</code></h3>
+
+**Signature**
+
+```ts
+get supported(): boolean
+```
+
+Returns whether battery is supported in the current environment.
+
+**Example**
+
+```ts
+if (Native.battery.supported) {
+    const battery = await Native.battery.value;
+
+    console.log(battery.level); // 0.0 – 1.0
+}
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+```ts
+// true  — battery API support,
+// false — no battery support
+```
+
+---
 
 <h3 id="battery-value"><code>battery.value</code></h3>
 
@@ -577,7 +653,99 @@ unsubscribe();
 
 ## fullscreen
 
-[`request`](#fullscreen-request) · [`exit`](#fullscreen-exit) · [`toggle`](#fullscreen-toggle) · [`onChange`](#fullscreen-onchange) · [`onError`](#fullscreen-onerror)
+[`supported`](#fullscreen-supported) · [`element`](#fullscreen-element) · [`isFullscreen`](#fullscreen-isfullscreen) · [`request`](#fullscreen-request) · [`exit`](#fullscreen-exit) · [`onChange`](#fullscreen-onchange) · [`onError`](#fullscreen-onerror)
+
+<h3 id="fullscreen-supported"><code>fullscreen.supported</code></h3>
+
+**Signature**
+
+```ts
+get supported(): boolean
+```
+
+Returns whether fullscreen is supported in the current environment.
+
+**Example**
+
+```ts
+if (Native.fullscreen.supported) {
+    await Native.fullscreen.request();
+}
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+```ts
+// true  — standard or vendor-prefixed fullscreen API detected,
+//         or iOS video with webkitSupportsFullscreen
+// false — no fullscreen support
+```
+
+---
+
+<h3 id="fullscreen-element"><code>fullscreen.element</code></h3>
+
+**Signature**
+
+```ts
+get element(): Element | null
+```
+
+Returns the element currently displayed in fullscreen, or null if not in fullscreen.
+
+**Example**
+
+```ts
+const el = Native.fullscreen.element;
+
+if (el !== null) {
+    console.log(el.tagName); // e.g. 'VIDEO', 'DIV'
+}
+```
+
+**Returns**
+
+```ts
+Element | null
+```
+
+
+```ts
+// Element — the current fullscreen element
+// null    — not in fullscreen
+```
+
+---
+
+<h3 id="fullscreen-isfullscreen"><code>fullscreen.isFullscreen</code></h3>
+
+**Signature**
+
+```ts
+get isFullscreen(): boolean
+```
+
+Returns whether fullscreen is currently active.
+
+**Example**
+
+```ts
+console.log(Native.fullscreen.isFullscreen); // true | false
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+---
 
 <h3 id="fullscreen-request"><code>fullscreen.request</code></h3>
 
@@ -587,29 +755,27 @@ unsubscribe();
 request(target?: Element, options?: FullscreenOptions): Promise<void>
 ```
 
-Requests fullscreen for an element. Concurrent calls are queued (FIFO).
+Requests fullscreen for an element.
 
 **Flowchart**
 
 ```mermaid
 flowchart TD
-    A([Fullscreen.request called]) --> B[Set lastIntendedOperation to request]
-    B --> C{activeOperation in progress?}
-    C -->|no| D[requestImmediately]
-    C -->|yes| E[Push to pendingQueue]
-    D --> F{api available?}
-    F -->|yes| G[Call element api.request]
-    F -->|no| H[fallbackToIOSVideo]
-    G --> I{Promise returned?}
-    I -->|yes| J{Resolved?}
-    J -->|yes| K([resolve])
-    J -->|no| H
-    I -->|no| K
-    H --> L{iOS + VIDEO + webkitSupportsFullscreen?}
-    L -->|yes| M[video.webkitEnterFullscreen]
-    M --> K
-    L -->|no| N([Throw NotSupportedError])
-    D --> O[drainPendingOperation on settle]
+    A([Fullscreen.request called]) --> B{target defined?}
+    B -->|no| C[getDefaultTarget]
+    B -->|yes| D{api available?}
+    C --> D
+    D -->|yes| E[Call element api.request]
+    D -->|no| F[fallbackToIOSVideo]
+    E --> G{Promise returned?}
+    G -->|yes| H{Resolved?}
+    H -->|yes| I([resolve])
+    H -->|no| F
+    G -->|no| I
+    F --> J{iOS + VIDEO + webkitSupportsFullscreen?}
+    J -->|yes| K[video.webkitEnterFullscreen]
+    K --> I
+    J -->|no| L([Throw NotSupportedError])
 ```
 
 **Example**
@@ -623,10 +789,6 @@ await Native.fullscreen.request(document.getElementById('player'));
 
 // With options
 await Native.fullscreen.request(element, { navigationUI: 'hide' });
-
-// Concurrent calls — safely queued, not dropped
-Native.fullscreen.request(document.querySelector('video#a'));
-Native.fullscreen.request(document.querySelector('video#b'));
 ```
 
 **Returns**
@@ -644,6 +806,9 @@ throw new NotSupportedError // element does not support fullscreen
 ```ts
 throw new NotSupportedError // iOS video lacks webkitEnterFullscreen
 ```
+```ts
+throw new InvalidStateError // iOS video not yet played
+```
 
 ---
 
@@ -655,28 +820,26 @@ throw new NotSupportedError // iOS video lacks webkitEnterFullscreen
 exit(): Promise<void>
 ```
 
-Exits fullscreen. Concurrent calls are queued (FIFO).
+Exits fullscreen.
 
 **Flowchart**
 
 ```mermaid
 flowchart TD
-    A([Fullscreen.exit called]) --> B[Set lastIntendedOperation to exit]
-    B --> C{activeOperation in progress?}
-    C -->|no| D[exitImmediately]
-    C -->|yes| E[Push to pendingQueue]
-    D --> F{getElement null and lastIOSVideo null?}
-    F -->|yes| K([resolve immediately])
-    F -->|no| G{api available?}
-    G -->|yes| H[Call document api.exit]
-    G -->|no| I[fallbackToIOSVideo]
-    H --> J{Resolved?}
-    J -->|yes| K
-    J -->|no| I
-    I --> L{Displaying fullscreen video found?}
-    L -->|yes| M[webkitExitFullscreen]
-    M --> K
-    L -->|no| N([Throw NotSupportedError])
+    A([Fullscreen.exit called]) --> B{api available?}
+    B -->|yes| C[Call document api.exit]
+    B -->|no| D[fallbackToIOSVideo]
+    C --> E{Promise returned?}
+    E -->|yes| F{Resolved?}
+    F -->|yes| G([resolve])
+    F -->|no| D
+    E -->|no| G
+    D --> H{iOS + displaying fullscreen video found?}
+    H -->|yes| I[webkitExitFullscreen]
+    I --> G
+    H -->|no| J{getElement null?}
+    J -->|yes| G
+    J -->|no| K([Throw NotSupportedError])
 ```
 
 **Example**
@@ -700,49 +863,12 @@ throw new NotSupportedError // failed to exit fullscreen
 
 ---
 
-<h3 id="fullscreen-toggle"><code>fullscreen.toggle</code></h3>
-
-**Signature**
-
-```ts
-toggle(target?: Element, options?: FullscreenOptions): Promise<void>
-```
-
-Toggles fullscreen on or off.
-
-**Example**
-
-```ts
-// Toggle on button click
-btn.addEventListener('click', () => Native.fullscreen.toggle());
-
-// Toggle a specific element
-btn.addEventListener('click', () => {
-    Native.fullscreen.toggle(document.getElementById('player'));
-});
-```
-
-**Returns**
-
-```ts
-Promise<void>
-```
-
-
-**Throws**
-
-```ts
-throw new NotSupportedError // propagated from request() or exit()
-```
-
----
-
 <h3 id="fullscreen-onchange"><code>fullscreen.onChange</code></h3>
 
 **Signature**
 
 ```ts
-onChange(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void
+onChange(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to fullscreen state changes.
@@ -750,9 +876,10 @@ Subscribes to fullscreen state changes.
 **Example**
 
 ```ts
-const unsubscribe = Native.fullscreen.onChange(() => {
-    console.log('isFullscreen:', Native.fullscreen.isFullscreen);
-    console.log('element:', Native.fullscreen.element);
+const unsubscribe = Native.fullscreen.onChange((payload) => {
+    console.log(payload.isFullscreen); // true | false
+    console.log(payload.element);      // Element
+    console.log(payload.nativeEvent);  // Event
 });
 
 unsubscribe();
@@ -777,7 +904,7 @@ unsubscribe();
 **Signature**
 
 ```ts
-onError(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void
+onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to fullscreen errors.
@@ -785,8 +912,10 @@ Subscribes to fullscreen errors.
 **Example**
 
 ```ts
-const unsubscribe = Native.fullscreen.onError((event) => {
-    console.error('Fullscreen error:', event);
+const unsubscribe = Native.fullscreen.onError((payload) => {
+    console.log(payload.isFullscreen); // boolean
+    console.log(payload.element);      // Element
+    console.log(payload.nativeEvent);  // Event
 });
 
 unsubscribe();
@@ -808,7 +937,41 @@ unsubscribe();
 
 ## geolocation
 
-[`value`](#geolocation-value) · [`onChange`](#geolocation-onchange)
+[`supported`](#geolocation-supported) · [`value`](#geolocation-value) · [`onChange`](#geolocation-onchange)
+
+<h3 id="geolocation-supported"><code>geolocation.supported</code></h3>
+
+**Signature**
+
+```ts
+get supported(): boolean
+```
+
+Returns whether geolocation is supported in the current environment.
+
+**Example**
+
+```ts
+if (Native.geolocation.supported) {
+    const coords = await Native.geolocation.value;
+
+    console.log(coords.latitude, coords.longitude);
+}
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+```ts
+// true  — geolocation API support,
+// false — no geolocation support
+```
+
+---
 
 <h3 id="geolocation-value"><code>geolocation.value</code></h3>
 
@@ -914,7 +1077,43 @@ unsubscribe();
 
 ## notification
 
-[`send`](#notification-send)
+[`supported`](#notification-supported) · [`send`](#notification-send)
+
+<h3 id="notification-supported"><code>notification.supported</code></h3>
+
+**Signature**
+
+```ts
+get supported(): boolean
+```
+
+Returns whether notification is supported in the current environment.
+
+**Example**
+
+```ts
+if (Native.notification.supported) {
+    await Native.notification.send({
+        title: 'Hello',
+        body:  'You have a new message.',
+        icon:  '/icon.png',
+    });
+}
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+```ts
+// true  — notification API support,
+// false — no notification support
+```
+
+---
 
 <h3 id="notification-send"><code>notification.send</code></h3>
 
@@ -1538,7 +1737,39 @@ void
 
 ## permission
 
-[`request`](#permission-request) · [`check`](#permission-check)
+[`supported`](#permission-supported) · [`request`](#permission-request) · [`check`](#permission-check)
+
+<h3 id="permission-supported"><code>permission.supported</code></h3>
+
+**Signature**
+
+```ts
+get supported(): boolean
+```
+
+Returns whether permission is supported in the current environment.
+
+**Example**
+
+```ts
+if (Native.permission.supported) {
+    const state = await Native.permission.check(PermissionType.Geolocation);
+}
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+```ts
+// true  — permission API support,
+// false — no permission support
+```
+
+---
 
 <h3 id="permission-request"><code>permission.request</code></h3>
 
@@ -1654,7 +1885,99 @@ enum PermissionState {
 
 ## pip
 
-[`request`](#pip-request) · [`exit`](#pip-exit) · [`toggle`](#pip-toggle) · [`onChange`](#pip-onchange) · [`onError`](#pip-onerror)
+[`supported`](#pip-supported) · [`element`](#pip-element) · [`isPip`](#pip-ispip) · [`request`](#pip-request) · [`exit`](#pip-exit) · [`onChange`](#pip-onchange) · [`onError`](#pip-onerror)
+
+<h3 id="pip-supported"><code>pip.supported</code></h3>
+
+**Signature**
+
+```ts
+get supported(): boolean
+```
+
+Returns whether Picture-in-Picture is supported in the current environment.
+
+**Example**
+
+```ts
+if (Native.pip.supported) {
+    await Native.pip.request();
+}
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+```ts
+// true  — document.pictureInPictureEnabled is true,
+//         or a video with webkitSupportsPresentationMode('picture-in-picture') exists
+// false — no PiP support
+```
+
+---
+
+<h3 id="pip-element"><code>pip.element</code></h3>
+
+**Signature**
+
+```ts
+get element(): HTMLVideoElement | null
+```
+
+Returns the video element currently in Picture-in-Picture, or null if not active.
+
+**Example**
+
+```ts
+const el = Native.pip.element;
+
+if (el !== null) {
+    console.log(el.src); // currently PiP video source
+}
+```
+
+**Returns**
+
+```ts
+HTMLVideoElement | null
+```
+
+
+```ts
+// HTMLVideoElement — the current PiP video
+// null            — not in PiP
+```
+
+---
+
+<h3 id="pip-ispip"><code>pip.isPip</code></h3>
+
+**Signature**
+
+```ts
+get isPip(): boolean
+```
+
+Returns whether Picture-in-Picture is currently active.
+
+**Example**
+
+```ts
+console.log(Native.pip.isPip); // true | false
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+---
 
 <h3 id="pip-request"><code>pip.request</code></h3>
 
@@ -1664,29 +1987,29 @@ enum PermissionState {
 request(target?: HTMLVideoElement): Promise<void>
 ```
 
-Requests Picture-in-Picture for a video element. Concurrent calls are queued (FIFO).
+Requests Picture-in-Picture for a video element.
 
 **Flowchart**
 
 ```mermaid
 flowchart TD
-    A([Pip.request called]) --> B[Set lastIntendedOperation to request]
-    B --> C{activeOperation in progress?}
-    C -->|no| D[requestImmediately]
-    C -->|yes| E[Push to pendingQueue]
-    D --> F{target is video element?}
-    F -->|no| Z([Throw NotSupportedError])
-    F -->|yes| G{requestPictureInPicture available?}
-    G -->|yes| H[Call video.requestPictureInPicture]
-    G -->|no| I[fallbackToWebkitVideo]
-    H --> J{Resolved?}
-    J -->|yes| K([resolve])
-    J -->|no| I
-    I --> L{webkitSupportsPresentationMode PIP?}
-    L -->|yes| M[webkitSetPresentationMode picture-in-picture]
-    M --> K
-    L -->|no| N([Throw NotSupportedError])
-    D --> O[drainPendingOperation on settle]
+    A([Pip.request called]) --> B{target defined?}
+    B -->|no| C[getDefaultTarget]
+    B -->|yes| D{target is video element?}
+    C --> D
+    D -->|no| Z([Throw NotSupportedError])
+    D -->|yes| E{requestPictureInPicture available?}
+    E -->|yes| F[Call video.requestPictureInPicture]
+    E -->|no| G[fallbackToWebkit]
+    F --> H{Promise returned?}
+    H -->|yes| I{Resolved?}
+    I -->|yes| J([resolve])
+    I -->|no| G
+    H -->|no| J
+    G --> K{webkitSupportsPresentationMode PIP?}
+    K -->|yes| L[webkitSetPresentationMode picture-in-picture]
+    L --> J
+    K -->|no| M([Throw NotSupportedError])
 ```
 
 **Example**
@@ -1697,10 +2020,6 @@ await Native.pip.request();
 
 // Specific video element
 await Native.pip.request(document.querySelector('video#player'));
-
-// Concurrent calls — safely queued, not dropped
-Native.pip.request(document.querySelector('video#a'));
-Native.pip.request(document.querySelector('video#b'));
 ```
 
 **Returns**
@@ -1721,6 +2040,9 @@ throw new NotSupportedError // PiP disabled on this element (disablePictureInPic
 ```ts
 throw new NotSupportedError // requestPictureInPicture and webkitSetPresentationMode both unavailable
 ```
+```ts
+throw new InvalidStateError // PiP transition already in progress
+```
 
 ---
 
@@ -1732,7 +2054,29 @@ throw new NotSupportedError // requestPictureInPicture and webkitSetPresentation
 exit(): Promise<void>
 ```
 
-Exits Picture-in-Picture. Concurrent calls are queued (FIFO).
+Exits Picture-in-Picture.
+
+**Flowchart**
+
+```mermaid
+flowchart TD
+    A([Pip.exit called]) --> B{exitPictureInPicture available?}
+    B -->|yes| C[Call document.exitPictureInPicture]
+    B -->|no| D[fallbackToWebkit]
+    C --> E{Promise returned?}
+    E -->|yes| F{Resolved?}
+    F -->|yes| G([resolve])
+    F -->|no| D
+    E -->|no| G
+    D --> H{webkit PiP video found?}
+    H -->|yes| I[webkitSetPresentationMode inline]
+    I --> G
+    H -->|no| J{any video in PIP mode found?}
+    J -->|yes| I
+    J -->|no| K{pictureInPictureElement null?}
+    K -->|yes| G
+    K -->|no| L([Throw NotSupportedError])
+```
 
 **Example**
 
@@ -1755,49 +2099,12 @@ throw new NotSupportedError // failed to exit PiP
 
 ---
 
-<h3 id="pip-toggle"><code>pip.toggle</code></h3>
-
-**Signature**
-
-```ts
-toggle(target?: HTMLVideoElement): Promise<void>
-```
-
-Toggles Picture-in-Picture on or off.
-
-**Example**
-
-```ts
-// Toggle on button click
-btn.addEventListener('click', () => Native.pip.toggle());
-
-// Toggle a specific video element
-btn.addEventListener('click', () => {
-    Native.pip.toggle(document.querySelector('video#player'));
-});
-```
-
-**Returns**
-
-```ts
-Promise<void>
-```
-
-
-**Throws**
-
-```ts
-throw new NotSupportedError // propagated from request() or exit()
-```
-
----
-
 <h3 id="pip-onchange"><code>pip.onChange</code></h3>
 
 **Signature**
 
 ```ts
-onChange(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void
+onChange(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to Picture-in-Picture state changes.
@@ -1805,9 +2112,10 @@ Subscribes to Picture-in-Picture state changes.
 **Example**
 
 ```ts
-const unsubscribe = Native.pip.onChange(() => {
-    console.log('isPip:', Native.pip.isPip);
-    console.log('element:', Native.pip.element);
+const unsubscribe = Native.pip.onChange((payload) => {
+    console.log(payload.isPip);       // true | false
+    console.log(payload.element);     // HTMLVideoElement
+    console.log(payload.nativeEvent); // Event
 });
 
 unsubscribe();
@@ -1832,7 +2140,7 @@ unsubscribe();
 **Signature**
 
 ```ts
-onError(listener: (event: Event) => void, options?: AddEventListenerOptions): () => void
+onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to Picture-in-Picture errors.
@@ -1840,8 +2148,10 @@ Subscribes to Picture-in-Picture errors.
 **Example**
 
 ```ts
-const unsubscribe = Native.pip.onError((event) => {
-    console.error('PiP error:', event);
+const unsubscribe = Native.pip.onError((payload) => {
+    console.log(payload.isPip);       // boolean
+    console.log(payload.element);     // HTMLVideoElement
+    console.log(payload.nativeEvent); // Event
 });
 
 unsubscribe();
@@ -2301,7 +2611,39 @@ string | undefined
 
 ## vibration
 
-[`run`](#vibration-run) · [`stop`](#vibration-stop)
+[`supported`](#vibration-supported) · [`run`](#vibration-run) · [`stop`](#vibration-stop)
+
+<h3 id="vibration-supported"><code>vibration.supported</code></h3>
+
+**Signature**
+
+```ts
+get supported(): boolean
+```
+
+Returns whether vibration is supported in the current environment.
+
+**Example**
+
+```ts
+if (Native.vibration.supported) {
+    Native.vibration.run([100, 50, 200]);
+}
+```
+
+**Returns**
+
+```ts
+boolean
+```
+
+
+```ts
+// true  — vibration API support,
+// false — no vibration support
+```
+
+---
 
 <h3 id="vibration-run"><code>vibration.run</code></h3>
 

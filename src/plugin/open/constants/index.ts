@@ -1,5 +1,4 @@
-import {OS} from "../../platform/constants";
-import {DirectoryOptions} from "../types";
+import {OS} from "../../platform";
 
 export enum AppOpenState {
     Scheme,

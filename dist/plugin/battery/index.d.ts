@@ -17,8 +17,8 @@ interface BatteryManager extends EventTarget {
     onlevelchange: ((this: BatteryManager, ev: Event) => any) | null;
 }
 declare interface BatteryInstance {
-    get value(): Promise<BatteryManager>;
     get supported(): boolean;
+    get value(): Promise<BatteryManager>;
     onChange(listener: (battery: BatteryManager) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {

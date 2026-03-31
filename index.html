@@ -10,5 +10,50 @@
 <script>
 </script>
 <body>
+<video src="https://www.w3schools.com/tags/mov_bbb.mp4" controls width="200px"></video>
+<video src="https://www.w3schools.com/tags/mov_bbb.mp4" controls width="200px"></video>
+
+<br/>
+
+<button onclick="FSExt()">FSExt</button>
+
+<button onclick="FSReq1()">FSReq1</button>
+
+<button onclick="FSReq2()">FSReq2</button>
+
+<br/>
+
+<button onclick="PipExt()">PipExt</button>
+
+<button onclick="PipReq1()">PipReq1</button>
+
+<button onclick="PipReq2()">PipReq2</button>
 </body>
+
+<script type="module">
+	import Native from './dist/native.mjs';
+
+	globalThis.Native = Native;
+</script>
+
+<script>
+	function FSExt() {
+		Native.fullscreen.exit()
+	}
+	function FSReq1() {
+		Native.fullscreen.request(document.querySelectorAll('video').item(0))
+	}
+	function FSReq2() {
+		Native.fullscreen.request(document.querySelectorAll('video').item(1))
+	}
+	function PipExt() {
+		Native.pip.exit()
+	}
+	function PipReq1() {
+		Native.pip.request(document.querySelectorAll('video').item(0))
+	}
+	function PipReq2() {
+		Native.pip.request(document.querySelectorAll('video').item(1))
+	}
+</script>
 </html>
