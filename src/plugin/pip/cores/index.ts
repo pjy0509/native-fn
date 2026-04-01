@@ -4,11 +4,14 @@ import EventListener from "../../../utils/event-listener";
 import {SubscriptionManager} from "../../../types/subscription-manager";
 import {NotSupportedError} from "../../../errors/not-supported-error";
 import {InvalidStateError} from "../../../errors/invalid-state-error";
+import Platform, {Browsers, OS} from "../../platform";
 
 declare global {
     interface HTMLVideoElement {
         webkitSupportsPresentationMode?(mode: string): boolean;
+
         webkitSetPresentationMode?(mode: string): void;
+
         webkitPresentationMode?: string;
         onwebkitpresentationmodechanged?: ((this: Element, ev: Event) => any) | null;
     }
@@ -26,7 +29,8 @@ type PipExitMethod = (this: Document) => Promise<void> | void;
 const PIP_PRESENTATION_MODE: string = 'picture-in-picture';
 const INLINE_PRESENTATION_MODE: string = 'inline';
 
-let lastPipVideo: HTMLVideoElement | null = null;
+let videoElement: HTMLVideoElement | null = null;
+let lastFallbackVideoElement: HTMLVideoElement | null = null;
 let eventsBridged: boolean = false;
 
 const PIP_BRIDGE_KEY: string | symbol = (function (): string | symbol {
@@ -46,18 +50,19 @@ const onErrorSubscriptionManager: SubscriptionManager<PipInstance, PipEventPaylo
 
 const Pip: PipInstance = {
     get supported(): boolean {
-        return getEnabled();
+        return getSupported();
     },
     get element(): HTMLVideoElement | null {
         return getElement();
     },
-    get isPip(): boolean {
-        return getIsPip();
+    get isActive(): boolean {
+        return getIsActive();
     },
     request: request,
     exit: exit,
-    onChange: onChangeSubscriptionManager.subscribe,
-    onError: onErrorSubscriptionManager.subscribe,
+    toggle: toggle,
+    onChange: onChange,
+    onError: onError,
     Constants: {},
     Errors: {
         NotSupportedError: NotSupportedError,
@@ -65,30 +70,43 @@ const Pip: PipInstance = {
     },
 };
 
+function getHTMLVideoElement(): HTMLVideoElement {
+    const selected: HTMLVideoElement | null = globalThis.document.querySelector('video');
+
+    if (selected !== null) return selected;
+    if (videoElement === null) return videoElement = globalThis.document.createElement('video');
+    return videoElement;
+}
+
 function hasStandardApi(): boolean {
     return typeof globalThis.document.pictureInPictureEnabled !== 'undefined';
+}
+
+function hasWebkitApi(): boolean {
+    return typeof getHTMLVideoElement().webkitSetPresentationMode === 'function';
 }
 
 function getDefaultTarget(): HTMLVideoElement | undefined {
     const video: HTMLVideoElement | null = globalThis.document.querySelector('video');
 
-    return video !== null ? video : undefined;
+    if (video !== null) return video;
+    return undefined;
 }
 
-function createPipEventPayload(nativeEvent: Event, element: HTMLVideoElement, isPip: boolean): PipEventPayload {
+function createPipEventPayload(nativeEvent: Event, element: HTMLVideoElement, isActive: boolean): PipEventPayload {
     return {
         nativeEvent: nativeEvent,
         element: element,
-        isPip: isPip
+        isActive: isActive
     };
 }
 
-function emitChange(nativeEvent: Event, element: HTMLVideoElement, isPip: boolean): void {
-    onChangeSubscriptionManager.emit(createPipEventPayload(nativeEvent, element, isPip));
+function emitChange(nativeEvent: Event, element: HTMLVideoElement, isActive: boolean): void {
+    onChangeSubscriptionManager.emit(createPipEventPayload(nativeEvent, element, isActive));
 }
 
-function emitError(nativeEvent: Event, element: HTMLVideoElement, isPip: boolean): void {
-    onErrorSubscriptionManager.emit(createPipEventPayload(nativeEvent, element, isPip));
+function emitError(nativeEvent: Event, element: HTMLVideoElement, isActive: boolean): void {
+    onErrorSubscriptionManager.emit(createPipEventPayload(nativeEvent, element, isActive));
 }
 
 function onEnterPictureInPicture(event: Event): void {
@@ -106,18 +124,18 @@ function onLeavePictureInPicture(event: Event): void {
 function onPictureInPictureError(event: Event): void {
     const target: EventTarget | null = event.target;
 
-    if (target instanceof globalThis.HTMLVideoElement) emitError(event, target, getIsPip());
+    if (target instanceof globalThis.HTMLVideoElement) emitError(event, target, getIsActive());
 }
 
 function onWebkitPresentationModeChanged(this: HTMLVideoElement, event: Event): void {
     if (this.webkitPresentationMode === PIP_PRESENTATION_MODE) {
-        lastPipVideo = this;
+        lastFallbackVideoElement = this;
         emitChange(event, this, true);
         return;
     }
 
-    if (this.webkitPresentationMode === INLINE_PRESENTATION_MODE && lastPipVideo === this) {
-        lastPipVideo = null;
+    if (this.webkitPresentationMode === INLINE_PRESENTATION_MODE && lastFallbackVideoElement === this) {
+        lastFallbackVideoElement = null;
         emitChange(event, this, false);
     }
 }
@@ -142,14 +160,14 @@ function bridgeEvents(): void {
 
     eventsBridged = true;
 
-    if (hasStandardApi()) return;
+    if (hasStandardApi() && !hasWebkitApi()) return;
 
     bridgeWebkitVideoEvents();
 
     if (typeof globalThis.MutationObserver === 'undefined') return;
 
     const observer: MutationObserver = new globalThis.MutationObserver(function (records: MutationRecord[]): void {
-        if (lastPipVideo !== null) {
+        if (lastFallbackVideoElement !== null) {
             let removed: boolean = false;
 
             for (let i: number = 0; i < records.length; i++) {
@@ -158,7 +176,7 @@ function bridgeEvents(): void {
                 for (let j: number = 0; j < removedNodes.length; j++) {
                     const node: Node = removedNodes[j];
 
-                    if (node === lastPipVideo || (node.nodeType === Node.ELEMENT_NODE && (node as Element).contains(lastPipVideo))) {
+                    if (node === lastFallbackVideoElement || (node.nodeType === Node.ELEMENT_NODE && (node as Element).contains(lastFallbackVideoElement))) {
                         removed = true;
                         break;
                     }
@@ -167,7 +185,7 @@ function bridgeEvents(): void {
                 if (removed) break;
             }
 
-            if (removed && !globalThis.document.contains(lastPipVideo)) lastPipVideo = null;
+            if (removed && !globalThis.document.contains(lastFallbackVideoElement)) lastFallbackVideoElement = null;
         }
 
         for (let i: number = 0; i < records.length; i++) {
@@ -228,14 +246,10 @@ function detachOnError(): void {
     EventListener.remove(globalThis.document, {type: 'pictureinpictureerror', callback: onPictureInPictureError, options: false});
 }
 
-function getEnabled(): boolean {
+function getSupported(): boolean {
     if (typeof globalThis.document.pictureInPictureEnabled === 'boolean') return globalThis.document.pictureInPictureEnabled;
 
-    let video: HTMLVideoElement;
-    const selected: HTMLVideoElement | null = globalThis.document.querySelector('video');
-
-    if (selected !== null) video = selected;
-    else video = globalThis.document.createElement('video');
+    let video: HTMLVideoElement = getHTMLVideoElement();
 
     return typeof video.webkitSupportsPresentationMode === 'function' && video.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE);
 }
@@ -244,12 +258,12 @@ function getElement(): HTMLVideoElement | null {
     const currentElement: Element | null | undefined = globalThis.document.pictureInPictureElement;
 
     if (currentElement !== null && typeof currentElement !== 'undefined') return currentElement as HTMLVideoElement;
-    if (lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE) return lastPipVideo;
+    if (lastFallbackVideoElement !== null && lastFallbackVideoElement.webkitPresentationMode === PIP_PRESENTATION_MODE) return lastFallbackVideoElement;
 
     return null;
 }
 
-function getIsPip(): boolean {
+function getIsActive(): boolean {
     return getElement() !== null;
 }
 
@@ -257,15 +271,16 @@ function request(this: PipInstance, target?: HTMLVideoElement): Promise<void> {
     return new Promise(function (resolve: () => void, reject: (error: Error) => void): void {
         if (typeof target === 'undefined') target = getDefaultTarget();
         if (typeof target === 'undefined') return reject(new NotSupportedError('Failed to enter Picture-in-Picture mode.'));
+        if (getIsActive() && getElement() !== target && Platform.browser.name === Browsers.Safari && Platform.os.name === OS.iOS) return reject(new NotSupportedError('There is already a Picture-in-Picture element in this document.'));
 
         const tagName: string = target.tagName.toLowerCase();
 
         if (tagName !== 'video') return reject(new NotSupportedError('The "' + tagName + '" element does not support Picture-in-Picture requests.'));
 
         const method: PipRequestMethod | undefined = target.requestPictureInPicture as PipRequestMethod | undefined;
-        const isWebkitPipActive: boolean = lastPipVideo !== null && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE;
+        const isWebkitPipActive: boolean = lastFallbackVideoElement !== null && lastFallbackVideoElement.webkitPresentationMode === PIP_PRESENTATION_MODE;
 
-        if (typeof method === 'function' && !isWebkitPipActive) {
+        if (typeof method === 'function' && !hasWebkitApi() && !isWebkitPipActive) {
             const result: void | Promise<PictureInPictureWindow> = method.call(target);
 
             if (typeof result !== 'undefined' && typeof result.then === 'function') {
@@ -287,13 +302,9 @@ function request(this: PipInstance, target?: HTMLVideoElement): Promise<void> {
         function fallbackToWebkit(): void {
             if (typeof target !== 'undefined' && typeof target.webkitSupportsPresentationMode === 'function' && target.webkitSupportsPresentationMode(PIP_PRESENTATION_MODE) && typeof target.webkitSetPresentationMode === 'function') {
                 if (target.disablePictureInPicture) return reject(new NotSupportedError('Picture-in-Picture is disabled on this element.'));
-                if (!hasStandardApi()) bridgeSingleVideoNode(target as BridgedHTMLVideoElement);
 
+                bridgeSingleVideoNode(target as BridgedHTMLVideoElement);
                 target.webkitSetPresentationMode(PIP_PRESENTATION_MODE);
-
-                if (target.webkitPresentationMode !== PIP_PRESENTATION_MODE) return reject(new InvalidStateError('Picture-in-Picture transition is already in progress.'));
-
-                lastPipVideo = target;
 
                 return resolve();
             }
@@ -309,7 +320,7 @@ function exit(this: PipInstance): Promise<void> {
     return new Promise(function (resolve: () => void, reject: (error: Error) => void): void {
         const method: PipExitMethod | undefined = globalThis.document.exitPictureInPicture as PipExitMethod | undefined;
 
-        if (typeof method === 'function') {
+        if (typeof method === 'function' && !hasWebkitApi()) {
             const result: void | Promise<void> = method.call(globalThis.document);
 
             if (typeof result !== 'undefined' && typeof result.then === 'function') {
@@ -329,9 +340,8 @@ function exit(this: PipInstance): Promise<void> {
         }
 
         function fallbackToWebkit(): void {
-            if (lastPipVideo !== null && typeof lastPipVideo.webkitSetPresentationMode === 'function' && lastPipVideo.webkitPresentationMode === PIP_PRESENTATION_MODE) {
-                lastPipVideo.webkitSetPresentationMode(INLINE_PRESENTATION_MODE);
-                lastPipVideo = null;
+            if (lastFallbackVideoElement !== null && typeof lastFallbackVideoElement.webkitSetPresentationMode === 'function') {
+                lastFallbackVideoElement.webkitSetPresentationMode(INLINE_PRESENTATION_MODE);
 
                 return resolve();
             }
@@ -343,19 +353,58 @@ function exit(this: PipInstance): Promise<void> {
 
                 if (typeof video.webkitSetPresentationMode === 'function' && video.webkitPresentationMode === PIP_PRESENTATION_MODE) {
                     video.webkitSetPresentationMode(INLINE_PRESENTATION_MODE);
-                    lastPipVideo = null;
 
                     return resolve();
                 }
             }
 
-            if (globalThis.document.pictureInPictureElement === null || typeof globalThis.document.pictureInPictureElement === 'undefined') return resolve();
-
-            reject(new NotSupportedError('Failed to exit Picture-in-Picture mode.'));
+            return resolve();
         }
 
         fallbackToWebkit();
     });
+}
+
+function toggle(this: PipInstance, target?: HTMLVideoElement): Promise<void> {
+    const current: HTMLVideoElement | null = getElement();
+
+    if (typeof target !== 'undefined') {
+        if (current === target) return this.exit();
+        else return this.request(target);
+    }
+
+    if (current !== null) return this.exit();
+    else return this.request(target);
+}
+
+function onChange(this: PipInstance, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
+function onChange(this: PipInstance, target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
+function onChange(this: PipInstance, targetOrListener: HTMLVideoElement | ((payload: PipEventPayload) => void), listenerOrOptions?: ((payload: PipEventPayload) => void) | AddEventListenerOptions, options?: AddEventListenerOptions): () => void {
+    if (typeof targetOrListener === 'function') return onChangeSubscriptionManager.subscribe(targetOrListener, listenerOrOptions as AddEventListenerOptions | undefined);
+
+    const target: HTMLVideoElement = targetOrListener;
+    const listener: (payload: PipEventPayload) => void = listenerOrOptions as (payload: PipEventPayload) => void;
+
+    function wrappedListener(payload: PipEventPayload) {
+        if (payload.element === target) listener(payload);
+    }
+
+    return onChangeSubscriptionManager.subscribe(wrappedListener, options);
+}
+
+function onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
+function onError(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
+function onError(targetOrListener: HTMLVideoElement | ((payload: PipEventPayload) => void), listenerOrOptions?: ((payload: PipEventPayload) => void) | AddEventListenerOptions, options?: AddEventListenerOptions): () => void {
+    if (typeof targetOrListener === 'function') return onErrorSubscriptionManager.subscribe(targetOrListener, listenerOrOptions as AddEventListenerOptions | undefined);
+
+    const target: HTMLVideoElement = targetOrListener;
+    const listener: (payload: PipEventPayload) => void = listenerOrOptions as (payload: PipEventPayload) => void;
+
+    function wrappedListener(payload: PipEventPayload) {
+        if (payload.element === target) listener(payload);
+    }
+
+    return onErrorSubscriptionManager.subscribe(wrappedListener, options);
 }
 
 bridgeEvents();

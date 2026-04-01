@@ -56,9 +56,10 @@ yarn add native-fn
 - **[fullscreen](#fullscreen)**
     - [supported](#fullscreen-supported)
     - [element](#fullscreen-element)
-    - [isFullscreen](#fullscreen-isfullscreen)
+    - [isActive](#fullscreen-isactive)
     - [request](#fullscreen-request)
     - [exit](#fullscreen-exit)
+    - [toggle](#fullscreen-toggle)
     - [onChange](#fullscreen-onchange)
     - [onError](#fullscreen-onerror)
 - **[geolocation](#geolocation)**
@@ -87,9 +88,10 @@ yarn add native-fn
 - **[pip](#pip)**
     - [supported](#pip-supported)
     - [element](#pip-element)
-    - [isPip](#pip-ispip)
+    - [isActive](#pip-isactive)
     - [request](#pip-request)
     - [exit](#pip-exit)
+    - [toggle](#pip-toggle)
     - [onChange](#pip-onchange)
     - [onError](#pip-onerror)
 - **[platform](#platform)**
@@ -299,7 +301,7 @@ Returns whether battery is supported in the current environment.
 ```ts
 if (Native.battery.supported) {
     const battery = await Native.battery.value;
-
+    
     console.log(battery.level); // 0.0 – 1.0
 }
 ```
@@ -334,7 +336,7 @@ Returns the current battery status.
 const battery = await Native.battery.value;
 
 console.log(battery.level);           // 0.0 – 1.0
-console.log(battery.charging);        // true | false
+console.log(battery.charging);        // boolean
 console.log(battery.chargingTime);    // seconds until full
 console.log(battery.dischargingTime); // seconds until empty
 ```
@@ -378,7 +380,7 @@ Subscribes to battery status changes.
 ```ts
 const unsubscribe = Native.battery.onChange((battery) => {
     console.log(battery.level);    // 0.0 – 1.0
-    console.log(battery.charging); // true | false
+    console.log(battery.charging); // boolean
 });
 
 unsubscribe();
@@ -653,7 +655,7 @@ unsubscribe();
 
 ## fullscreen
 
-[`supported`](#fullscreen-supported) · [`element`](#fullscreen-element) · [`isFullscreen`](#fullscreen-isfullscreen) · [`request`](#fullscreen-request) · [`exit`](#fullscreen-exit) · [`onChange`](#fullscreen-onchange) · [`onError`](#fullscreen-onerror)
+[`supported`](#fullscreen-supported) · [`element`](#fullscreen-element) · [`isActive`](#fullscreen-isactive) · [`request`](#fullscreen-request) · [`exit`](#fullscreen-exit) · [`toggle`](#fullscreen-toggle) · [`onChange`](#fullscreen-onchange) · [`onError`](#fullscreen-onerror)
 
 <h3 id="fullscreen-supported"><code>fullscreen.supported</code></h3>
 
@@ -702,7 +704,7 @@ Returns the element currently displayed in fullscreen, or null if not in fullscr
 
 ```ts
 const el = Native.fullscreen.element;
-
+ 
 if (el !== null) {
     console.log(el.tagName); // e.g. 'VIDEO', 'DIV'
 }
@@ -722,12 +724,12 @@ Element | null
 
 ---
 
-<h3 id="fullscreen-isfullscreen"><code>fullscreen.isFullscreen</code></h3>
+<h3 id="fullscreen-isactive"><code>fullscreen.isActive</code></h3>
 
 **Signature**
 
 ```ts
-get isFullscreen(): boolean
+get isActive(): boolean
 ```
 
 Returns whether fullscreen is currently active.
@@ -735,7 +737,7 @@ Returns whether fullscreen is currently active.
 **Example**
 
 ```ts
-console.log(Native.fullscreen.isFullscreen); // true | false
+console.log(Native.fullscreen.isActive); // boolean
 ```
 
 **Returns**
@@ -783,10 +785,10 @@ flowchart TD
 ```ts
 // Default: documentElement on desktop, first video on iOS
 await Native.fullscreen.request();
-
+ 
 // Specific element
 await Native.fullscreen.request(document.getElementById('player'));
-
+ 
 // With options
 await Native.fullscreen.request(element, { navigationUI: 'hide' });
 ```
@@ -863,12 +865,60 @@ throw new NotSupportedError // failed to exit fullscreen
 
 ---
 
+<h3 id="fullscreen-toggle"><code>fullscreen.toggle</code></h3>
+
+**Signature**
+
+```ts
+toggle(target?: Element, options?: FullscreenOptions): Promise<void>
+```
+
+Toggles fullscreen for an element.
+
+**Example**
+
+```ts
+// Default: documentElement on desktop, first video on iOS
+await Native.fullscreen.toggle();
+ 
+// Specific element
+await Native.fullscreen.toggle(document.getElementById('player'));
+ 
+// With options
+await Native.fullscreen.toggle(element, { navigationUI: 'hide' });
+```
+
+**Returns**
+
+```ts
+Promise<void>
+```
+
+
+**Throws**
+
+```ts
+throw new NotSupportedError // element does not support fullscreen
+```
+```ts
+throw new NotSupportedError // iOS video lacks webkitEnterFullscreen
+```
+```ts
+throw new NotSupportedError // failed to exit fullscreen
+```
+```ts
+throw new InvalidStateError // iOS video not yet played
+```
+
+---
+
 <h3 id="fullscreen-onchange"><code>fullscreen.onChange</code></h3>
 
 **Signature**
 
 ```ts
 onChange(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void
+onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to fullscreen state changes.
@@ -877,11 +927,11 @@ Subscribes to fullscreen state changes.
 
 ```ts
 const unsubscribe = Native.fullscreen.onChange((payload) => {
-    console.log(payload.isFullscreen); // true | false
+    console.log(payload.isActive);     // boolean
     console.log(payload.element);      // Element
     console.log(payload.nativeEvent);  // Event
 });
-
+ 
 unsubscribe();
 ```
 
@@ -905,6 +955,7 @@ unsubscribe();
 
 ```ts
 onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void
+onError(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to fullscreen errors.
@@ -913,11 +964,11 @@ Subscribes to fullscreen errors.
 
 ```ts
 const unsubscribe = Native.fullscreen.onError((payload) => {
-    console.log(payload.isFullscreen); // boolean
+    console.log(payload.isActive);     // boolean
     console.log(payload.element);      // Element
     console.log(payload.nativeEvent);  // Event
 });
-
+ 
 unsubscribe();
 ```
 
@@ -1268,13 +1319,13 @@ try {
     switch (result) {
         AppOpenState.Intent:
             console.log('Opened via Android intent.');    break;
-            AppOpenState.Universal:
+        AppOpenState.Universal:
             console.log('Opened via Universal Link.');    break;
-            AppOpenState.Scheme:
+        AppOpenState.Scheme:
             console.log('Opened via custom scheme.');     break;
-            AppOpenState.Fallback:
+        AppOpenState.Fallback:
             console.log('Opened via fallback URL.');      break;
-            AppOpenState.Store:
+        AppOpenState.Store:
             console.log('Redirected to App Store.');      break;
     }
 } catch (e) {
@@ -1625,11 +1676,23 @@ Promise<Contact[]>
 
 ```ts
 interface Contact {
-    name?:    string;
-    email?:   string;
-    tel?:     string;
-    address?: string;
+    name?:    string[];
+    email?:   string[];
+    tel?:     string[];
+    address?: ContactAddress[];
     icon?:    Blob[];
+}
+
+interface ContactAddress {
+    country?:           string;
+    region?:            string;
+    city?:              string;
+    dependentLocality?: string;
+    postalCode?:        string;
+    sortingCode?:       string;
+    organization?:      string;
+    recipient?:         string;
+    addressLine?:       string[];
 }
 ```
 
@@ -1885,7 +1948,7 @@ enum PermissionState {
 
 ## pip
 
-[`supported`](#pip-supported) · [`element`](#pip-element) · [`isPip`](#pip-ispip) · [`request`](#pip-request) · [`exit`](#pip-exit) · [`onChange`](#pip-onchange) · [`onError`](#pip-onerror)
+[`supported`](#pip-supported) · [`element`](#pip-element) · [`isActive`](#pip-isactive) · [`request`](#pip-request) · [`exit`](#pip-exit) · [`toggle`](#pip-toggle) · [`onChange`](#pip-onchange) · [`onError`](#pip-onerror)
 
 <h3 id="pip-supported"><code>pip.supported</code></h3>
 
@@ -1934,7 +1997,7 @@ Returns the video element currently in Picture-in-Picture, or null if not active
 
 ```ts
 const el = Native.pip.element;
-
+ 
 if (el !== null) {
     console.log(el.src); // currently PiP video source
 }
@@ -1954,12 +2017,12 @@ HTMLVideoElement | null
 
 ---
 
-<h3 id="pip-ispip"><code>pip.isPip</code></h3>
+<h3 id="pip-isactive"><code>pip.isActive</code></h3>
 
 **Signature**
 
 ```ts
-get isPip(): boolean
+get isActive(): boolean
 ```
 
 Returns whether Picture-in-Picture is currently active.
@@ -1967,7 +2030,7 @@ Returns whether Picture-in-Picture is currently active.
 **Example**
 
 ```ts
-console.log(Native.pip.isPip); // true | false
+console.log(Native.pip.isActive); // boolean
 ```
 
 **Returns**
@@ -2017,7 +2080,7 @@ flowchart TD
 ```ts
 // Default: first video element
 await Native.pip.request();
-
+ 
 // Specific video element
 await Native.pip.request(document.querySelector('video#player'));
 ```
@@ -2099,12 +2162,60 @@ throw new NotSupportedError // failed to exit PiP
 
 ---
 
+<h3 id="pip-toggle"><code>pip.toggle</code></h3>
+
+**Signature**
+
+```ts
+toggle(target?: HTMLVideoElement): Promise<void>
+```
+
+Toggles Picture-in-Picture for a video element.
+
+**Example**
+
+```ts
+// Default: first video element
+await Native.pip.toggle();
+ 
+// Specific video element
+await Native.pip.toggle(document.querySelector('video#player'));
+```
+
+**Returns**
+
+```ts
+Promise<void>
+```
+
+
+**Throws**
+
+```ts
+throw new NotSupportedError // target is not a video element
+```
+```ts
+throw new NotSupportedError // PiP disabled on this element (disablePictureInPicture)
+```
+```ts
+throw new NotSupportedError // requestPictureInPicture and webkitSetPresentationMode both unavailable
+```
+```ts
+throw new NotSupportedError // failed to exit PiP
+```
+```ts
+throw new InvalidStateError // PiP transition already in progress
+```
+
+---
+
 <h3 id="pip-onchange"><code>pip.onChange</code></h3>
 
 **Signature**
 
 ```ts
 onChange(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
+onChange(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to Picture-in-Picture state changes.
@@ -2113,11 +2224,11 @@ Subscribes to Picture-in-Picture state changes.
 
 ```ts
 const unsubscribe = Native.pip.onChange((payload) => {
-    console.log(payload.isPip);       // true | false
+    console.log(payload.isActive);    // boolean
     console.log(payload.element);     // HTMLVideoElement
     console.log(payload.nativeEvent); // Event
 });
-
+ 
 unsubscribe();
 ```
 
@@ -2141,6 +2252,7 @@ unsubscribe();
 
 ```ts
 onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
+onError(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to Picture-in-Picture errors.
@@ -2149,7 +2261,7 @@ Subscribes to Picture-in-Picture errors.
 
 ```ts
 const unsubscribe = Native.pip.onError((payload) => {
-    console.log(payload.isPip);       // boolean
+    console.log(payload.isActive);    // boolean
     console.log(payload.element);     // HTMLVideoElement
     console.log(payload.nativeEvent); // Event
 });

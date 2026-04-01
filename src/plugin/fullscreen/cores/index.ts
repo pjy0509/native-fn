@@ -1,6 +1,6 @@
 import {FullscreenEventPayload, FullscreenInstance} from "../types";
 import Platform from "../../platform/cores";
-import {OS} from "../../platform";
+import {Browsers, OS} from "../../platform";
 import createSubscriptionManager from "../../../utils/create-subscription-manager";
 import EventListener from "../../../utils/event-listener";
 import {SubscriptionManager} from "../../../types/subscription-manager";
@@ -73,7 +73,8 @@ interface FullscreenApiVariants {
 type FullscreenRequestMethod = (this: any, options?: FullscreenOptions) => Promise<void> | void;
 type FullscreenExitMethod = (this: Document) => Promise<void> | void;
 
-let lastIOSVideo: HTMLVideoElement | null = null;
+let videoElement: HTMLVideoElement | null = null;
+let lastFallbackVideoElement: HTMLVideoElement | null = null;
 let eventsBridged: boolean = false;
 
 const FS_BRIDGE_KEY: string | symbol = (function (): string | symbol {
@@ -125,24 +126,33 @@ const onErrorSubscriptionManager: SubscriptionManager<FullscreenInstance, Fullsc
 
 const Fullscreen: FullscreenInstance = {
     get supported(): boolean {
-        return getEnabled();
+        return getSupported();
     },
     get element(): Element | null {
         return getElement();
     },
-    get isFullscreen(): boolean {
-        return getIsFullscreen();
+    get isActive(): boolean {
+        return getIsActive();
     },
     request: request,
     exit: exit,
-    onChange: onChangeSubscriptionManager.subscribe,
-    onError: onErrorSubscriptionManager.subscribe,
+    toggle: toggle,
+    onChange: onChange,
+    onError: onError,
     Constants: {},
     Errors: {
         NotSupportedError: NotSupportedError,
         InvalidStateError: InvalidStateError,
     },
 };
+
+function getHTMLVideoElement(): HTMLVideoElement {
+    const selected: HTMLVideoElement | null = globalThis.document.querySelector('video');
+
+    if (selected !== null) return selected;
+    if (videoElement === null) return videoElement = globalThis.document.createElement('video');
+    return videoElement;
+}
 
 function hasStandardApi(): boolean {
     return api !== null;
@@ -173,29 +183,26 @@ function getDefaultTarget(): Element | undefined {
     if (Platform.os.name === OS.iOS) {
         const video: HTMLVideoElement | null = globalThis.document.querySelector('video');
 
-        return video !== null ? video : undefined;
+        if (video !== null) return video;
+        return undefined;
     }
 
     return globalThis.document.documentElement;
 }
 
-function getEnabled(): boolean {
+function getSupported(): boolean {
     if (api !== null) return globalThis.document[api.enabled] === true;
 
     if (Platform.os.name !== OS.iOS) return false;
 
-    let video: HTMLVideoElement;
-    const selected: HTMLVideoElement | null = globalThis.document.querySelector('video');
-
-    if (selected !== null) video = selected;
-    else video = globalThis.document.createElement('video');
+    let video: HTMLVideoElement = getHTMLVideoElement();
 
     return video.webkitSupportsFullscreen === true || typeof video.webkitEnterFullscreen === 'function';
 }
 
 function getElement(): Element | null {
     if (api === null) {
-        if (lastIOSVideo !== null && lastIOSVideo.webkitDisplayingFullscreen === true) return lastIOSVideo;
+        if (lastFallbackVideoElement !== null && lastFallbackVideoElement.webkitDisplayingFullscreen === true) return lastFallbackVideoElement;
 
         return null;
     }
@@ -207,47 +214,47 @@ function getElement(): Element | null {
     return null;
 }
 
-function getIsFullscreen(): boolean {
+function getIsActive(): boolean {
     return getElement() !== null;
 }
 
-function createEventPayload(nativeEvent: Event, element: Element, isFullscreen: boolean): FullscreenEventPayload {
+function createEventPayload(nativeEvent: Event, element: Element, isActive: boolean): FullscreenEventPayload {
     return {
         nativeEvent: nativeEvent,
         element: element,
-        isFullscreen: isFullscreen,
+        isActive: isActive,
     };
 }
 
-function emitChange(nativeEvent: Event, element: Element, isFullscreen: boolean): void {
-    onChangeSubscriptionManager.emit(createEventPayload(nativeEvent, element, isFullscreen));
+function emitChange(nativeEvent: Event, element: Element, isActive: boolean): void {
+    onChangeSubscriptionManager.emit(createEventPayload(nativeEvent, element, isActive));
 }
 
-function emitError(nativeEvent: Event, element: Element, isFullscreen: boolean): void {
-    onErrorSubscriptionManager.emit(createEventPayload(nativeEvent, element, isFullscreen));
+function emitError(nativeEvent: Event, element: Element, isActive: boolean): void {
+    onErrorSubscriptionManager.emit(createEventPayload(nativeEvent, element, isActive));
 }
 
 function onFullscreenChange(event: Event): void {
     const target: EventTarget | null = event.target;
 
-    if (target instanceof globalThis.Element) emitChange(event, target, getIsFullscreen());
-    if (target instanceof globalThis.Document) emitChange(event, globalThis.document.documentElement, getIsFullscreen());
+    if (target instanceof globalThis.Element) emitChange(event, target, getIsActive());
+    if (target instanceof globalThis.Document) emitChange(event, globalThis.document.documentElement, getIsActive());
 }
 
 function onFullscreenError(event: Event): void {
     const target: EventTarget | null = event.target;
 
-    if (target instanceof globalThis.Element) emitError(event, target, getIsFullscreen());
-    if (target instanceof globalThis.Document) emitError(event, globalThis.document.documentElement, getIsFullscreen());
+    if (target instanceof globalThis.Element) emitError(event, target, getIsActive());
+    if (target instanceof globalThis.Document) emitError(event, globalThis.document.documentElement, getIsActive());
 }
 
 function onIOSBeginFullscreen(this: HTMLVideoElement, event: Event): void {
-    lastIOSVideo = this;
+    lastFallbackVideoElement = this;
     emitChange(event, this, true);
 }
 
 function onIOSEndFullscreen(this: HTMLVideoElement, event: Event): void {
-    if (lastIOSVideo === this) lastIOSVideo = null;
+    if (lastFallbackVideoElement === this) lastFallbackVideoElement = null;
     emitChange(event, this, false);
 }
 
@@ -279,7 +286,7 @@ function bridgeEvents(): void {
     if (typeof globalThis.MutationObserver === 'undefined') return;
 
     const observer: MutationObserver = new globalThis.MutationObserver(function (records: MutationRecord[]): void {
-        if (lastIOSVideo !== null) {
+        if (lastFallbackVideoElement !== null) {
             let removed: boolean = false;
 
             for (let i: number = 0; i < records.length; i++) {
@@ -288,7 +295,7 @@ function bridgeEvents(): void {
                 for (let j: number = 0; j < removedNodes.length; j++) {
                     const node: Node = removedNodes[j];
 
-                    if (node === lastIOSVideo || (node.nodeType === Node.ELEMENT_NODE && (node as Element).contains(lastIOSVideo))) {
+                    if (node === lastFallbackVideoElement || (node.nodeType === Node.ELEMENT_NODE && (node as Element).contains(lastFallbackVideoElement))) {
                         removed = true;
                         break;
                     }
@@ -297,7 +304,7 @@ function bridgeEvents(): void {
                 if (removed) break;
             }
 
-            if (removed && !globalThis.document.contains(lastIOSVideo)) lastIOSVideo = null;
+            if (removed && !globalThis.document.contains(lastFallbackVideoElement)) lastFallbackVideoElement = null;
         }
 
         for (let i: number = 0; i < records.length; i++) {
@@ -357,9 +364,10 @@ function request(this: FullscreenInstance, target?: Element, options?: Fullscree
     return new Promise(function (resolve: () => void, reject: (error: Error) => void): void {
         if (typeof target === 'undefined') target = getDefaultTarget();
         if (typeof target === 'undefined') return reject(new NotSupportedError('Failed to enter fullscreen mode.'));
+        if (getIsActive() && getElement() !== target && Platform.browser.name === Browsers.Safari && Platform.os.name === OS.iOS) return reject(new NotSupportedError('There is already a Fullscreen element in this document.'));
 
         const tagName: string = target.tagName.toLowerCase();
-        const isIOSFullscreenActive: boolean = lastIOSVideo !== null && lastIOSVideo.webkitDisplayingFullscreen === true;
+        const isIOSFullscreenActive: boolean = lastFallbackVideoElement !== null && lastFallbackVideoElement.webkitDisplayingFullscreen === true;
 
         if (api !== null) {
             const method: FullscreenRequestMethod | undefined = target[api.request] as FullscreenRequestMethod | undefined;
@@ -374,7 +382,7 @@ function request(this: FullscreenInstance, target?: Element, options?: Fullscree
                             try {
                                 if (Platform.os.name !== OS.iOS) return reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
                                 fallbackToIOSVideo();
-                            } catch (_e: unknown) {
+                            } catch (e: unknown) {
                                 reject(new NotSupportedError('The "' + tagName + '" element does not support fullscreen requests.'));
                             }
                         });
@@ -396,7 +404,7 @@ function request(this: FullscreenInstance, target?: Element, options?: Fullscree
                         video.play()
                             .then(function (): void {
                                 try {
-                                    video.webkitEnterFullscreen!();
+                                    if (video.webkitSupportsFullscreen && typeof video.webkitEnterFullscreen === 'function') video.webkitEnterFullscreen();
                                 } catch (e: unknown) {
                                     return reject(new InvalidStateError('The object is in an invalid state.'));
                                 }
@@ -409,7 +417,7 @@ function request(this: FullscreenInstance, target?: Element, options?: Fullscree
                         }
                     }
 
-                    lastIOSVideo = video;
+                    lastFallbackVideoElement = video;
                     return resolve();
                 }
             }
@@ -432,14 +440,7 @@ function exit(this: FullscreenInstance): Promise<void> {
                 if (typeof result !== 'undefined' && typeof result.then === 'function') {
                     result
                         .then(resolve)
-                        .catch(function (): void {
-                            try {
-                                if (Platform.os.name !== OS.iOS) return reject(new NotSupportedError('Failed to exit fullscreen mode.'));
-                                fallbackToIOSVideo();
-                            } catch (_e: unknown) {
-                                reject(new NotSupportedError('Failed to exit fullscreen mode.'));
-                            }
-                        });
+                        .catch(resolve);
                     return;
                 }
 
@@ -453,14 +454,14 @@ function exit(this: FullscreenInstance): Promise<void> {
                 return;
             }
 
-            const target: HTMLVideoElement | null = lastIOSVideo;
+            const target: HTMLVideoElement | null = lastFallbackVideoElement;
 
             if (target !== null && typeof target.webkitExitFullscreen === 'function' && target.webkitDisplayingFullscreen === true) {
                 target.webkitExitFullscreen();
 
                 if (target.webkitDisplayingFullscreen) return reject(new NotSupportedError('Failed to exit fullscreen mode.'));
 
-                lastIOSVideo = null;
+                lastFallbackVideoElement = null;
 
                 return resolve();
             }
@@ -475,7 +476,7 @@ function exit(this: FullscreenInstance): Promise<void> {
 
                     if (video.webkitDisplayingFullscreen) return reject(new NotSupportedError('Failed to exit fullscreen mode.'));
 
-                    lastIOSVideo = null;
+                    lastFallbackVideoElement = null;
 
                     return resolve();
                 }
@@ -488,6 +489,48 @@ function exit(this: FullscreenInstance): Promise<void> {
 
         fallbackToIOSVideo();
     });
+}
+
+function toggle(this: FullscreenInstance, target?: Element, options?: FullscreenOptions): Promise<void> {
+    const current: Element | null = getElement();
+
+    if (typeof target !== 'undefined') {
+        if (current === target) return this.exit();
+        return this.request(target, options);
+    }
+
+    if (current !== null) return this.exit();
+    return this.request(undefined, options);
+}
+
+function onChange(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
+function onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
+function onChange(targetOrListener: Element | ((payload: FullscreenEventPayload) => void), listenerOrOptions?: ((payload: FullscreenEventPayload) => void) | AddEventListenerOptions, options?: AddEventListenerOptions): () => void {
+    if (typeof targetOrListener === 'function') return onChangeSubscriptionManager.subscribe(targetOrListener, listenerOrOptions as AddEventListenerOptions | undefined);
+
+    const target: Element = targetOrListener;
+    const listener: (payload: FullscreenEventPayload) => void = listenerOrOptions as (payload: FullscreenEventPayload) => void;
+
+    function wrappedListener(payload: FullscreenEventPayload): void {
+        if (payload.element === target) listener(payload);
+    }
+
+    return onChangeSubscriptionManager.subscribe(wrappedListener, options);
+}
+
+function onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
+function onError(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
+function onError(targetOrListener: Element | ((payload: FullscreenEventPayload) => void), listenerOrOptions?: ((payload: FullscreenEventPayload) => void) | AddEventListenerOptions, options?: AddEventListenerOptions): () => void {
+    if (typeof targetOrListener === 'function') return onErrorSubscriptionManager.subscribe(targetOrListener, listenerOrOptions as AddEventListenerOptions | undefined);
+
+    const target: Element = targetOrListener;
+    const listener: (payload: FullscreenEventPayload) => void = listenerOrOptions as (payload: FullscreenEventPayload) => void;
+
+    function wrappedListener(payload: FullscreenEventPayload): void {
+        if (payload.element === target) listener(payload);
+    }
+
+    return onErrorSubscriptionManager.subscribe(wrappedListener, options);
 }
 
 bridgeEvents();

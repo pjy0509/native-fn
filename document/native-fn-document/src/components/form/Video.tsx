@@ -518,7 +518,7 @@ export default function Video({src, poster, label, showTitle = false, title, asp
         if (video.buffered.length > 0) setBuffered(video.buffered.end(video.buffered.length - 1));
     }
 
-    const isPipSupported = typeof document !== "undefined" && "pictureInPictureEnabled" in document;
+    const isActiveSupported = typeof document !== "undefined" && "pictureInPictureEnabled" in document;
 
     return (
         <div>
@@ -631,7 +631,7 @@ export default function Video({src, poster, label, showTitle = false, title, asp
                         }
 
                         {
-                            isPipSupported
+                            isActiveSupported
                             && <ControlButton onClick={() => void togglePip()} aria-label="Picture in picture">
 								<PipIcon/>
 							</ControlButton>

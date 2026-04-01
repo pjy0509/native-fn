@@ -147,13 +147,16 @@ declare const Dimension: DimensionInstance;
 declare const InvalidStateError: ErrorConstructor;
 
 declare interface FullscreenInstance {
-    supported: boolean;
-    element: Element | null;
-    isFullscreen: boolean;
+    get supported(): boolean;
+    get element(): Element | null;
+    get isActive(): boolean;
     request(target?: Element, options?: FullscreenOptions): Promise<void>;
+    toggle(target?: Element, options?: FullscreenOptions): Promise<void>;
     exit(): Promise<void>;
     onChange(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
+    onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
     onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
+    onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;
@@ -163,7 +166,7 @@ declare interface FullscreenInstance {
 declare interface FullscreenEventPayload {
     nativeEvent: Event;
     element: Element;
-    isFullscreen: boolean;
+    isActive: boolean;
 }
 
 declare global {
@@ -733,11 +736,14 @@ declare const Permission: PermissionInstance;
 declare interface PipInstance {
     get supported(): boolean;
     get element(): HTMLVideoElement | null;
-    get isPip(): boolean;
+    get isActive(): boolean;
     request(target?: HTMLVideoElement): Promise<void>;
     exit(): Promise<void>;
+    toggle(target?: HTMLVideoElement): Promise<void>;
     onChange(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
+    onChange(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
     onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
+    onError(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
     Constants: {};
     Errors: {
         NotSupportedError: typeof NotSupportedError;
@@ -747,7 +753,7 @@ declare interface PipInstance {
 declare interface PipEventPayload {
     nativeEvent: Event;
     element: HTMLVideoElement;
-    isPip: boolean;
+    isActive: boolean;
 }
 
 declare global {

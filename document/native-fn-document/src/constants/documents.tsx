@@ -519,6 +519,51 @@ const TRY_IT_OUT = {
                 <TryResult result={result}/>
             </TryContainer>;
         },
+        toggle: function TryItOut(): React.JSX.Element {
+            const [cssPath, setCssPath] = React.useState<string>("");
+            const [result, setResult] = React.useState<TryResultProps>(null);
+
+            async function run(): Promise<void> {
+                try {
+                    let element: Element | null = null;
+
+                    try {
+                        element = document.querySelector(cssPath);
+                    } catch (_) {
+                    }
+
+                    if (element === null) await Native.fullscreen.toggle();
+                    else await Native.fullscreen.toggle(element);
+
+                    setResult({ok: true, text: "Fullscreen requested."});
+                } catch (e) {
+                    setResult({ok: false, text: safeStr(e)});
+                }
+            }
+
+            return <TryContainer>
+                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" title="Big Buck Bunny" showTitle/>
+
+                <Spacing height="0.75rem"/>
+
+                <InspectButton onSelectElement={setCssPath}/>
+
+                {
+                    cssPath
+                    && <>
+						<FieldLabel>Selected</FieldLabel>
+
+						<HintMessage>{cssPath}</HintMessage>
+					</>
+                }
+
+                <Spacing height="0.75rem"/>
+
+                <Button.Primary.Small onClick={run}>Run</Button.Primary.Small>
+
+                <TryResult result={result}/>
+            </TryContainer>;
+        },
         onChange: function TryItOut(): React.JSX.Element {
             const [result, setResult] = React.useState<TryResultProps>(null);
             const [subscribed, setSubscribed] = React.useState<boolean>(false);
@@ -533,7 +578,7 @@ const TRY_IT_OUT = {
                         text: safeStr({
                             nativeEvent: payload.nativeEvent.type,
                             element: payload.element.tagName,
-                            isFullscreen: payload.isFullscreen,
+                            isActive: payload.isActive,
                         }),
                     });
                 });
@@ -567,7 +612,7 @@ const TRY_IT_OUT = {
                         text: safeStr({
                             nativeEvent: payload.nativeEvent.type,
                             element: payload.element.tagName,
-                            isFullscreen: payload.isFullscreen,
+                            isActive: payload.isActive,
                         }),
                     });
                 });
@@ -1280,6 +1325,52 @@ const TRY_IT_OUT = {
                 <TryResult result={result}/>
             </TryContainer>;
         },
+        toggle: function TryItOut(): React.JSX.Element {
+            const [cssPath, setCssPath] = React.useState<string>("");
+            const [result, setResult] = React.useState<TryResultProps>(null);
+
+            async function run(): Promise<void> {
+                try {
+                    let element: Element | null = null;
+
+                    try {
+                        element = document.querySelector(cssPath);
+                    } catch (_) {
+                    }
+
+                    if (element === null) await Native.pip.toggle();
+                    else if (element instanceof HTMLVideoElement) await Native.pip.toggle(element)
+                    else return setResult({ok: false, text: 'The "' + element.tagName + '" element does not support Picture-in-Picture requests.'});
+
+                    setResult({ok: true, text: "Picture-in-Picture requested."});
+                } catch (e) {
+                    setResult({ok: false, text: safeStr(e)});
+                }
+            }
+
+            return <TryContainer>
+                <Video src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" title="For Bigger Blazes" showTitle/>
+
+                <Spacing height="0.75rem"/>
+
+                <InspectButton onSelectElement={setCssPath}/>
+
+                {
+                    cssPath
+                    && <>
+						<FieldLabel>Selected</FieldLabel>
+
+						<HintMessage>{cssPath}</HintMessage>
+					</>
+                }
+
+                <Spacing height="0.75rem"/>
+
+                <Button.Primary.Small onClick={run}>Run</Button.Primary.Small>
+
+                <TryResult result={result}/>
+            </TryContainer>;
+        },
         onChange: function TryItOut(): React.JSX.Element {
             const [result, setResult] = React.useState<TryResultProps>(null);
             const [subscribed, setSubscribed] = React.useState<boolean>(false);
@@ -1294,7 +1385,7 @@ const TRY_IT_OUT = {
                         text: safeStr({
                             nativeEvent: payload.nativeEvent.type,
                             element: payload.element.tagName,
-                            isPip: payload.isPip,
+                            isActive: payload.isActive,
                         }),
                     });
                 });
@@ -1328,7 +1419,7 @@ const TRY_IT_OUT = {
                         text: safeStr({
                             nativeEvent: payload.nativeEvent.type,
                             element: payload.element.tagName,
-                            isPip: payload.isPip,
+                            isActive: payload.isActive,
                         }),
                     });
                 });
@@ -1718,7 +1809,7 @@ if (Native.battery.supported) {
 const battery = await Native.battery.value;
 
 console.log(battery.level);           // 0.0 – 1.0
-console.log(battery.charging);        // true | false
+console.log(battery.charging);        // boolean
 console.log(battery.chargingTime);    // seconds until full
 console.log(battery.dischargingTime); // seconds until empty
             `,
@@ -1740,7 +1831,7 @@ console.log(battery.dischargingTime); // seconds until empty
             example: `
 const unsubscribe = Native.battery.onChange((battery) => {
     console.log(battery.level);    // 0.0 – 1.0
-    console.log(battery.charging); // true | false
+    console.log(battery.charging); // boolean
 });
 
 unsubscribe();
@@ -1954,11 +2045,11 @@ if (el !== null) {
             },
             throws: [],
         },
-        isFullscreen: {
-            signature: `get isFullscreen(): boolean`,
+        isActive: {
+            signature: `get isActive(): boolean`,
             description: `Returns whether fullscreen is currently active.`,
             example: `
-console.log(Native.fullscreen.isFullscreen); // true | false
+console.log(Native.fullscreen.isActive); // boolean
             `,
             returns: {type: `boolean`},
             throws: [],
@@ -2029,12 +2120,35 @@ await Native.fullscreen.exit();
             throws: [`throw new NotSupportedError // failed to exit fullscreen`],
             tryItOut: TRY_IT_OUT.fullscreen.exit,
         },
+        toggle: {
+            signature: `toggle(target?: Element, options?: FullscreenOptions): Promise<void>`,
+            description: `Toggles fullscreen for an element.`,
+            example: `
+// Default: documentElement on desktop, first video on iOS
+await Native.fullscreen.toggle();
+ 
+// Specific element
+await Native.fullscreen.toggle(document.getElementById('player'));
+ 
+// With options
+await Native.fullscreen.toggle(element, { navigationUI: 'hide' });
+            `,
+            returns: {type: `Promise<void>`},
+            throws: [
+                `throw new NotSupportedError // element does not support fullscreen`,
+                `throw new NotSupportedError // iOS video lacks webkitEnterFullscreen`,
+                `throw new NotSupportedError // failed to exit fullscreen`,
+                `throw new InvalidStateError // iOS video not yet played`,
+            ],
+            tryItOut: TRY_IT_OUT.fullscreen.toggle,
+        },
         onChange: {
-            signature: `onChange(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void`,
+            signature: `onChange(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void
+onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void`,
             description: `Subscribes to fullscreen state changes.`,
             example: `
 const unsubscribe = Native.fullscreen.onChange((payload) => {
-    console.log(payload.isFullscreen); // true | false
+    console.log(payload.isActive);     // boolean
     console.log(payload.element);      // Element
     console.log(payload.nativeEvent);  // Event
 });
@@ -2049,11 +2163,12 @@ unsubscribe();
             tryItOut: TRY_IT_OUT.fullscreen.onChange,
         },
         onError: {
-            signature: `onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void`,
+            signature: `onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void
+onError(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void`,
             description: `Subscribes to fullscreen errors.`,
             example: `
 const unsubscribe = Native.fullscreen.onError((payload) => {
-    console.log(payload.isFullscreen); // boolean
+    console.log(payload.isActive);     // boolean
     console.log(payload.element);      // Element
     console.log(payload.nativeEvent);  // Event
 });
@@ -2467,11 +2582,23 @@ contacts.forEach((c) => console.log(c.name, c.email));
             returns: {
                 type: `Promise<Contact[]>`,
                 description: `interface Contact {
-    name?:    string;
-    email?:   string;
-    tel?:     string;
-    address?: string;
+    name?:    string[];
+    email?:   string[];
+    tel?:     string[];
+    address?: ContactAddress[];
     icon?:    Blob[];
+}
+
+interface ContactAddress {
+    country?:           string;
+    region?:            string;
+    city?:              string;
+    dependentLocality?: string;
+    postalCode?:        string;
+    sortingCode?:       string;
+    organization?:      string;
+    recipient?:         string;
+    addressLine?:       string[];
 }`,
             },
             throws: [`throw new NotSupportedError // navigator.contacts unavailable`],
@@ -2666,11 +2793,11 @@ if (el !== null) {
             },
             throws: [],
         },
-        isPip: {
-            signature: `get isPip(): boolean`,
+        isActive: {
+            signature: `get isActive(): boolean`,
             description: `Returns whether Picture-in-Picture is currently active.`,
             example: `
-console.log(Native.pip.isPip); // true | false
+console.log(Native.pip.isActive); // boolean
             `,
             returns: {type: `boolean`},
             throws: [],
@@ -2743,12 +2870,33 @@ await Native.pip.exit();
             throws: [`throw new NotSupportedError // failed to exit PiP`],
             tryItOut: TRY_IT_OUT.pip.exit,
         },
+        toggle: {
+            signature: `toggle(target?: HTMLVideoElement): Promise<void>`,
+            description: `Toggles Picture-in-Picture for a video element.`,
+            example: `
+// Default: first video element
+await Native.pip.toggle();
+ 
+// Specific video element
+await Native.pip.toggle(document.querySelector('video#player'));
+            `,
+            returns: {type: `Promise<void>`},
+            throws: [
+                `throw new NotSupportedError // target is not a video element`,
+                `throw new NotSupportedError // PiP disabled on this element (disablePictureInPicture)`,
+                `throw new NotSupportedError // requestPictureInPicture and webkitSetPresentationMode both unavailable`,
+                `throw new NotSupportedError // failed to exit PiP`,
+                `throw new InvalidStateError // PiP transition already in progress`,
+            ],
+            tryItOut: TRY_IT_OUT.pip.toggle,
+        },
         onChange: {
-            signature: `onChange(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void`,
+            signature: `onChange(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
+onChange(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void`,
             description: `Subscribes to Picture-in-Picture state changes.`,
             example: `
 const unsubscribe = Native.pip.onChange((payload) => {
-    console.log(payload.isPip);       // true | false
+    console.log(payload.isActive);    // boolean
     console.log(payload.element);     // HTMLVideoElement
     console.log(payload.nativeEvent); // Event
 });
@@ -2763,11 +2911,12 @@ unsubscribe();
             tryItOut: TRY_IT_OUT.pip.onChange,
         },
         onError: {
-            signature: `onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void`,
+            signature: `onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
+onError(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void`,
             description: `Subscribes to Picture-in-Picture errors.`,
             example: `
 const unsubscribe = Native.pip.onError((payload) => {
-    console.log(payload.isPip);       // boolean
+    console.log(payload.isActive);    // boolean
     console.log(payload.element);     // HTMLVideoElement
     console.log(payload.nativeEvent); // Event
 });
@@ -3081,6 +3230,11 @@ Native.vibration.stop();
 };
 
 const CHANGELOG = {
+    "1.2.2": [
+        "Add Native.pip.toggle — toggles PiP on the target element; switches to a new target without closing if another element is active",
+        "Add Native.fullscreen.toggle — toggles fullscreen on the target element; switches to a new target without closing if another element is active",
+        "Fix Native.pip.element returning incorrect element when webkit PiP was active",
+    ],
     "1.2.0": [
         "Fix Promise deadlock in Native.pip.request and Native.pip.exit caused by concurrent calls during PiP transition animation",
         "Fix Promise deadlock in Native.fullscreen.request and Native.fullscreen.exit caused by concurrent calls during fullscreen transition animation",

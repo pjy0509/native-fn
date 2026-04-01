@@ -656,10 +656,15 @@ function parseFromHighEntropyValues() {
                     parsedFromHighEntropyValuesEngine.version = brandVersion;
             }
             if (typeof platformVersion === 'string') {
-                if (getParsedCache().os.name === exports.OS.Windows)
-                    parsedFromHighEntropyValuesOS.version = parseInt(platformVersion.split('.')[0], 10) >= 13 ? '11' : '10';
-                else
+                if (getParsedCache().os.name === exports.OS.Windows) {
+                    if (parseInt(platformVersion.split('.')[0], 10) >= 13)
+                        parsedFromHighEntropyValuesOS.version = '11';
+                    else
+                        parsedFromHighEntropyValuesOS.version = '10';
+                }
+                else {
                     parsedFromHighEntropyValuesOS.version = platformVersion;
+                }
             }
             if (typeof platform === 'string') {
                 if (/android/i.test(platform))

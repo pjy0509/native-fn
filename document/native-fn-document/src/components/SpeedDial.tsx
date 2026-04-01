@@ -200,7 +200,10 @@ export default function SpeedDial({children}: SpeedDialProps) {
     }, []);
 
     const handleFabClick = React.useCallback(() => {
-        setOpen((prev) => !prev);
+        setOpen((prev) => {
+            if (prev) setHovered(false);
+            return !prev;
+        });
     }, []);
 
     return (

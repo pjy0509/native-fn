@@ -418,8 +418,12 @@ function parseFromHighEntropyValues(): Promise<void> {
                 }
 
                 if (typeof platformVersion === 'string') {
-                    if (getParsedCache().os.name === OS.Windows) parsedFromHighEntropyValuesOS.version = parseInt(platformVersion.split('.')[0], 10) >= 13 ? '11' : '10';
-                    else parsedFromHighEntropyValuesOS.version = platformVersion;
+                    if (getParsedCache().os.name === OS.Windows) {
+                        if (parseInt(platformVersion.split('.')[0], 10) >= 13) parsedFromHighEntropyValuesOS.version = '11';
+                        else parsedFromHighEntropyValuesOS.version = '10';
+                    } else {
+                        parsedFromHighEntropyValuesOS.version = platformVersion;
+                    }
                 }
 
                 if (typeof platform === 'string') {

@@ -1,6 +1,6 @@
 {
   "name": "native-fn",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "description": "TypeScript library bridging Web APIs to native device capabilities — Picture-in-Picture, Fullscreen, Clipboard, Geolocation, Battery, Notifications, Vibration, Platform detection, and more.",
   "author": "Park Jungyoung <qkrwnss0509@gmail.com> (https://github.com/pjy0509)",
   "type": "module",
