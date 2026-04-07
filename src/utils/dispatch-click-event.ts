@@ -1,4 +1,4 @@
-export default function dispatchClickEvent(element: HTMLElement, view: WindowProxy = window): void {
+export default function dispatchClickEvent(element: HTMLElement, view: WindowProxy = globalThis as unknown as WindowProxy): void {
     let fake: MouseEvent;
 
     try {

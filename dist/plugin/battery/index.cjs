@@ -317,6 +317,8 @@ function createSubscriptionManager(attach, detach) {
         },
         subscribe: function (listener, options) {
             if (options === void 0) { options = {}; }
+            if (typeof options.signal !== 'undefined' && options.signal.aborted)
+                return function () { };
             var entry = { fn: listener, once: false };
             if (typeof options.once !== 'undefined')
                 entry.once = options.once;
@@ -335,12 +337,8 @@ function createSubscriptionManager(attach, detach) {
                 EventListener.remove(entry.signal, { type: 'abort', callback: cleanup });
                 removeEntry(entry);
             };
-            if (typeof entry.signal !== 'undefined') {
-                if (entry.signal.aborted)
-                    removeEntry(entry);
-                else
-                    EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
-            }
+            if (typeof entry.signal !== 'undefined')
+                EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
             return function unsubscribe() {
                 removeEntry(entry);
             };

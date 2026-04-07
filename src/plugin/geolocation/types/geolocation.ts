@@ -8,9 +8,9 @@ export declare interface GeolocationInstance {
 
     onChange(listener: (coordinates: GeolocationCoordinates) => void, options?: AddEventListenerOptions): () => void;
 
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError,
-        PermissionNotGrantedError: typeof PermissionNotGrantedError,
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly PermissionNotGrantedError: typeof PermissionNotGrantedError;
     };
 }

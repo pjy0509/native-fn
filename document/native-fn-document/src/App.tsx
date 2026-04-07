@@ -300,16 +300,6 @@ export default function App() {
     const mainScrollbarRef = useSmoothScrollbar(mainScrollRef, {damping: 0.1});
 
     React.useEffect(() => {
-        function handleResize() {
-            if (window.innerWidth > 720) setNavigationOpen(true);
-        }
-
-        window.addEventListener("resize", handleResize);
-
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    React.useEffect(() => {
         fetch("https://registry.npmjs.org/native-fn")
             .then(response => response.json())
             .then(response => {

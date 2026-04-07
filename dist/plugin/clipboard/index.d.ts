@@ -1,8 +1,8 @@
 declare interface ClipboardInstance {
     copy(item: any): Promise<boolean>;
     paste(): Promise<string>;
-    Constants: {};
-    Errors: {};
+    readonly Constants: {};
+    readonly Errors: {};
 }
 
 declare const Clipboard: ClipboardInstance;

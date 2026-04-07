@@ -67,10 +67,9 @@ export enum Browsers {
     SamsungInternet = 'SamsungInternet',
 }
 
-export const USER_AGENT: string = (function (): string {
-    if (typeof globalThis.navigator.userAgent !== 'undefined') return globalThis.navigator.userAgent;
-    return '';
-})();
+export let USER_AGENT: string;
+if (typeof globalThis.navigator.userAgent !== 'undefined') USER_AGENT = globalThis.navigator.userAgent;
+else USER_AGENT = '';
 
 export const HIGH_ENTROPY_BRAND_NAME_MAP: Record<string, string> = {
     'Google Chrome': 'Chrome',

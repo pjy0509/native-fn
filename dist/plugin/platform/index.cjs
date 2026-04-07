@@ -91,11 +91,11 @@ exports.Browsers = void 0;
     Browsers["IE"] = "IE";
     Browsers["SamsungInternet"] = "SamsungInternet";
 })(exports.Browsers || (exports.Browsers = {}));
-var USER_AGENT = (function () {
-    if (typeof globalThis.navigator.userAgent !== 'undefined')
-        return globalThis.navigator.userAgent;
-    return '';
-})();
+exports.USER_AGENT = void 0;
+if (typeof globalThis.navigator.userAgent !== 'undefined')
+    exports.USER_AGENT = globalThis.navigator.userAgent;
+else
+    exports.USER_AGENT = '';
 var HIGH_ENTROPY_BRAND_NAME_MAP = {
     'Google Chrome': 'Chrome',
     'Microsoft Edge': 'Edge',
@@ -370,11 +370,14 @@ var EventListener = {
     },
 };
 
-var currentUserAgent = USER_AGENT;
+var currentUserAgent = exports.USER_AGENT;
 var parsedCache = null;
-var parsedFromHighEntropyValuesOS = {};
-var parsedFromHighEntropyValuesBrowser = {};
-var parsedFromHighEntropyValuesEngine = {};
+var parsedFromHighEntropyValuesOSName = undefined;
+var parsedFromHighEntropyValuesOSVersion = undefined;
+var parsedFromHighEntropyValuesBrowserName = undefined;
+var parsedFromHighEntropyValuesBrowserVersion = undefined;
+var parsedFromHighEntropyValuesEngineName = undefined;
+var parsedFromHighEntropyValuesEngineVersion = undefined;
 var parsedFromHighEntropyValuesDevice = null;
 var parsedFromNavigatorGPU = {};
 var cachedLocale = null;
@@ -421,9 +424,12 @@ function normalizeLocale(locale) {
 function invalidateCache() {
     parsedCache = null;
     cachedLocale = null;
-    parsedFromHighEntropyValuesOS = {};
-    parsedFromHighEntropyValuesBrowser = {};
-    parsedFromHighEntropyValuesEngine = {};
+    parsedFromHighEntropyValuesOSName = undefined;
+    parsedFromHighEntropyValuesOSVersion = undefined;
+    parsedFromHighEntropyValuesBrowserName = undefined;
+    parsedFromHighEntropyValuesBrowserVersion = undefined;
+    parsedFromHighEntropyValuesEngineName = undefined;
+    parsedFromHighEntropyValuesEngineVersion = undefined;
     parsedFromHighEntropyValuesDevice = null;
     parsedFromNavigatorGPU = {};
 }
@@ -439,71 +445,74 @@ function getParsedCache() {
     return parsedCache;
 }
 function parseOS() {
-    var result = { name: exports.OS.Unknown, version: '' };
+    var name = exports.OS.Unknown;
+    var version = '';
     for (var i = 0; i < OS_RESOLVER_MAP.length; i++) {
         var map = OS_RESOLVER_MAP[i];
         var matched = currentUserAgent.match(map[0]);
         if (matched !== null) {
-            result.name = map[1];
-            result.version = resolveVersion(matched[1], map[2]);
+            name = map[1];
+            version = resolveVersion(matched[1], map[2]);
             break;
         }
     }
-    if (result.name === exports.OS.iOS && compareVersion(result.version, '18.6') === 0) {
-        var version = /\) Version\/([\d.]+)/.exec(currentUserAgent);
-        if (version !== null) {
-            var major = parseInt(version[1].split('.')[0], 10);
+    if (name === exports.OS.iOS && compareVersion(version, '18.6') === 0) {
+        var execs = /\) Version\/([\d.]+)/.exec(currentUserAgent);
+        if (execs !== null) {
+            var major = parseInt(execs[1].split('.')[0], 10);
             if (major >= 26)
-                result.version = version[1];
+                version = execs[1];
         }
     }
-    if (currentUserAgent === USER_AGENT) {
-        if (typeof parsedFromHighEntropyValuesOS.name !== 'undefined')
-            result.name = parsedFromHighEntropyValuesOS.name;
-        if (typeof parsedFromHighEntropyValuesOS.version !== 'undefined')
-            result.version = parsedFromHighEntropyValuesOS.version;
-        if (result.name === exports.OS.MacOS && typeof globalThis.navigator.standalone !== 'undefined' && globalThis.navigator.maxTouchPoints > 2)
-            result.name = exports.OS.iOS;
+    if (currentUserAgent === exports.USER_AGENT) {
+        if (typeof parsedFromHighEntropyValuesOSName !== 'undefined')
+            name = parsedFromHighEntropyValuesOSName;
+        if (typeof parsedFromHighEntropyValuesOSVersion !== 'undefined')
+            version = parsedFromHighEntropyValuesOSVersion;
+        if (name === exports.OS.MacOS && typeof globalThis.navigator.standalone !== 'undefined' && globalThis.navigator.maxTouchPoints > 2)
+            name = exports.OS.iOS;
     }
-    return result;
+    return { name: name, version: version };
 }
 function parseBrowser() {
-    var result = { name: exports.Browsers.Unknown, version: '' };
+    var name = exports.Browsers.Unknown;
+    var version = '';
     for (var i = 0; i < BROWSER_RESOLVER_MAP.length; i++) {
         var map = BROWSER_RESOLVER_MAP[i];
         var matched = currentUserAgent.match(map[0]);
         if (matched !== null) {
-            result.name = map[1];
-            result.version = resolveVersion(matched[1], map[2]);
+            name = map[1];
+            version = resolveVersion(matched[1], map[2]);
             break;
         }
     }
-    if (currentUserAgent === USER_AGENT) {
-        if (typeof parsedFromHighEntropyValuesBrowser.name !== 'undefined')
-            result.name = parsedFromHighEntropyValuesBrowser.name;
-        if (typeof parsedFromHighEntropyValuesBrowser.version !== 'undefined')
-            result.version = parsedFromHighEntropyValuesBrowser.version;
+    if (currentUserAgent === exports.USER_AGENT) {
+        if (typeof parsedFromHighEntropyValuesBrowserName !== 'undefined')
+            name = parsedFromHighEntropyValuesBrowserName;
+        if (typeof parsedFromHighEntropyValuesBrowserVersion !== 'undefined')
+            version = parsedFromHighEntropyValuesBrowserVersion;
     }
-    return result;
+    return { name: name, version: version };
 }
 function parseEngine() {
-    var result = { name: exports.Engines.Unknown, version: '' };
+    var name = exports.Engines.Unknown;
+    var version = '';
     for (var i = 0; i < ENGINE_RESOLVER_MAP.length; i++) {
         var map = ENGINE_RESOLVER_MAP[i];
         var matched = currentUserAgent.match(map[0]);
         if (matched !== null) {
-            result.name = map[1];
-            result.version = resolveVersion(matched[1], map[2]);
+            name = map[1];
+            version = resolveVersion(matched[1], map[2]);
             break;
         }
     }
-    if (currentUserAgent === USER_AGENT) {
-        if (typeof parsedFromHighEntropyValuesEngine.name !== 'undefined')
-            result.name = parsedFromHighEntropyValuesEngine.name;
-        if (typeof parsedFromHighEntropyValuesEngine.version !== 'undefined')
-            result.version = parsedFromHighEntropyValuesEngine.version;
+    if (currentUserAgent === exports.USER_AGENT) {
+        if (typeof parsedFromHighEntropyValuesEngineName !== 'undefined')
+            name = parsedFromHighEntropyValuesEngineName;
+        if (typeof parsedFromHighEntropyValuesEngineVersion !== 'undefined')
+            version = parsedFromHighEntropyValuesEngineVersion;
     }
-    return result;
+    return { name: name, version: version };
 }
 function getGPU() {
     return {
@@ -516,24 +525,22 @@ function getGPU() {
 function getLocale() {
     if (cachedLocale !== null)
         return cachedLocale;
-    var locale = {
-        language: null,
-        languages: [],
-        timezone: null,
-        offset: 0,
-        isRTL: false,
-    };
-    var isRTL = null;
-    function addLanguages(language) {
-        for (var i = 0; i < language.length; i++)
-            addLanguage(language[i]);
+    var language = null;
+    var languages = [];
+    var timezone = null;
+    var offset = 0;
+    var isRTL = false;
+    var isRTLResolved = null;
+    function addLanguages(langs) {
+        for (var i = 0; i < langs.length; i++)
+            addLanguage(langs[i]);
     }
-    function addLanguage(language) {
-        language = normalizeLocale(language);
-        if (typeof language === 'string' && locale.languages.indexOf(language) === -1) {
-            if (locale.language === null)
-                locale.language = language;
-            locale.languages.push(language);
+    function addLanguage(lang) {
+        lang = normalizeLocale(lang);
+        if (typeof lang === 'string' && languages.indexOf(lang) === -1) {
+            if (language === null)
+                language = lang;
+            languages.push(lang);
         }
     }
     if (typeof Intl !== 'undefined') {
@@ -543,7 +550,7 @@ function getLocale() {
         catch (_) {
         }
         try {
-            locale.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         }
         catch (_) {
         }
@@ -561,42 +568,42 @@ function getLocale() {
             addLanguage(globalThis.navigator.systemLanguage);
     }
     try {
-        locale.offset = new Date().getTimezoneOffset() * -1;
+        offset = new Date().getTimezoneOffset() * -1;
     }
     catch (_) {
     }
-    if (typeof locale.language === 'string') {
+    if (typeof language === 'string') {
         if (typeof Intl !== 'undefined' && typeof Intl.Locale !== 'undefined') {
             try {
-                var intlLocale = new Intl.Locale(locale.language);
+                var intlLocale = new Intl.Locale(language);
                 if (typeof intlLocale.getTextInfo === 'function')
-                    isRTL = intlLocale.getTextInfo().direction === 'rtl';
+                    isRTLResolved = intlLocale.getTextInfo().direction === 'rtl';
                 else if (typeof intlLocale.textInfo !== 'undefined')
-                    isRTL = intlLocale.textInfo.direction === 'rtl';
+                    isRTLResolved = intlLocale.textInfo.direction === 'rtl';
             }
             catch (_) {
             }
         }
-        if (typeof isRTL !== 'boolean') {
-            var matched = /^([A-Za-z]{1,8})(?:[-_][A-Za-z0-9]{1,8})*$/.exec(locale.language);
+        if (typeof isRTLResolved !== 'boolean') {
+            var matched = /^([A-Za-z]{1,8})(?:[-_][A-Za-z0-9]{1,8})*$/.exec(language);
             if (matched !== null) {
-                var language = matched[1].toLowerCase();
+                var lang = matched[1].toLowerCase();
                 for (var i = 0; i < RTL_LANGUAGES.length; i++) {
-                    if (RTL_LANGUAGES[i] === language) {
-                        isRTL = true;
+                    if (RTL_LANGUAGES[i] === lang) {
+                        isRTLResolved = true;
                         break;
                     }
                 }
             }
         }
     }
-    if (typeof isRTL === 'boolean')
-        locale.isRTL = isRTL;
-    cachedLocale = locale;
+    if (typeof isRTLResolved === 'boolean')
+        isRTL = isRTLResolved;
+    cachedLocale = { language: language, languages: languages, timezone: timezone, offset: offset, isRTL: isRTL };
     return cachedLocale;
 }
 function getDevice() {
-    if (currentUserAgent === USER_AGENT && parsedFromHighEntropyValuesDevice !== null)
+    if (currentUserAgent === exports.USER_AGENT && parsedFromHighEntropyValuesDevice !== null)
         return parsedFromHighEntropyValuesDevice;
     var osName = getParsedCache().os.name;
     if (osName === exports.OS.iOS || osName === exports.OS.Android)
@@ -643,38 +650,38 @@ function parseFromHighEntropyValues() {
                     if (prevBrandName === null || /Chrom/.test(prevBrandName) || !/Chrom/.test(brandName)) {
                         browserName = brandName;
                         if (browserName === 'Chrome' || browserName === 'Chrome WebView' || browserName === 'Chrome Headless')
-                            parsedFromHighEntropyValuesBrowser.name = exports.Browsers.Chrome;
+                            parsedFromHighEntropyValuesBrowserName = exports.Browsers.Chrome;
                         else if (browserName === 'Edge' || browserName === 'Edge WebView2')
-                            parsedFromHighEntropyValuesBrowser.name = exports.Browsers.Edge;
+                            parsedFromHighEntropyValuesBrowserName = exports.Browsers.Edge;
                         else if (browserName === 'Opera Mobi')
-                            parsedFromHighEntropyValuesBrowser.name = exports.Browsers.Opera;
-                        parsedFromHighEntropyValuesBrowser.version = brandVersion;
+                            parsedFromHighEntropyValuesBrowserName = exports.Browsers.Opera;
+                        parsedFromHighEntropyValuesBrowserVersion = brandVersion;
                     }
                     prevBrandName = brandName;
                 }
                 if (brandName === 'Chromium')
-                    parsedFromHighEntropyValuesEngine.version = brandVersion;
+                    parsedFromHighEntropyValuesEngineVersion = brandVersion;
             }
             if (typeof platformVersion === 'string') {
                 if (getParsedCache().os.name === exports.OS.Windows) {
                     if (parseInt(platformVersion.split('.')[0], 10) >= 13)
-                        parsedFromHighEntropyValuesOS.version = '11';
+                        parsedFromHighEntropyValuesOSVersion = '11';
                     else
-                        parsedFromHighEntropyValuesOS.version = '10';
+                        parsedFromHighEntropyValuesOSVersion = '10';
                 }
                 else {
-                    parsedFromHighEntropyValuesOS.version = platformVersion;
+                    parsedFromHighEntropyValuesOSVersion = platformVersion;
                 }
             }
             if (typeof platform === 'string') {
                 if (/android/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = exports.OS.Android;
+                    parsedFromHighEntropyValuesOSName = exports.OS.Android;
                 else if (/ios|iphone|ipad/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = exports.OS.iOS;
+                    parsedFromHighEntropyValuesOSName = exports.OS.iOS;
                 else if (/windows|win32/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = exports.OS.Windows;
+                    parsedFromHighEntropyValuesOSName = exports.OS.Windows;
                 else if (/macos|macintel/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = exports.OS.MacOS;
+                    parsedFromHighEntropyValuesOSName = exports.OS.MacOS;
             }
             if (result.mobile === true)
                 parsedFromHighEntropyValuesDevice = exports.Devices.Mobile;
@@ -734,7 +741,7 @@ var Platform = {
             return;
         currentUserAgent = value;
         invalidateCache();
-        if (value === USER_AGENT) {
+        if (value === exports.USER_AGENT) {
             ready = Promise.all([
                 parseFromHighEntropyValues(),
                 parseFromNavigatorGPU(),
@@ -774,5 +781,4 @@ exports.ENGINE_RESOLVER_MAP = ENGINE_RESOLVER_MAP;
 exports.HIGH_ENTROPY_BRAND_NAME_MAP = HIGH_ENTROPY_BRAND_NAME_MAP;
 exports.OS_RESOLVER_MAP = OS_RESOLVER_MAP;
 exports.RTL_LANGUAGES = RTL_LANGUAGES;
-exports.USER_AGENT = USER_AGENT;
 exports.default = Platform;

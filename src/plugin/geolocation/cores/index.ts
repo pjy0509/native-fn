@@ -8,7 +8,7 @@ import {SubscriptionManager} from "../../../types/subscription-manager";
 import createSubscriptionManager from "../../../utils/create-subscription-manager";
 import assign from "../../../utils/assign";
 
-const onChangeSubscriptionManager: SubscriptionManager<GeolocationInstance, GeolocationCoordinates> = createSubscriptionManager<GeolocationInstance, GeolocationCoordinates>(attachOnChange, detachOnChange);
+const onChangeSubscriptionManager: SubscriptionManager<GeolocationCoordinates> = createSubscriptionManager<GeolocationCoordinates>(attachOnChange, detachOnChange);
 let watchIdRef: number | null = null;
 
 interface IPApiResponse {

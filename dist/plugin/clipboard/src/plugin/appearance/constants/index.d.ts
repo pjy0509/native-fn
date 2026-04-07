@@ -3,6 +3,6 @@ export declare enum Appearances {
     Light = "light",
     Dark = "dark"
 }
-export declare let MEDIA_QUERY_LIST: MediaQueryList;
+export declare let PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST: MediaQueryList;
 export declare const CONTEXT: CanvasRenderingContext2D | null;
 export declare const SVG_PIXEL_DATA_URL: string;

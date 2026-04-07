@@ -10,6 +10,8 @@ exports.PermissionType = void 0;
     PermissionType["ClipboardRead"] = "clipboard-read";
     PermissionType["Microphone"] = "microphone";
     PermissionType["MIDI"] = "midi";
+    PermissionType["DeviceOrientation"] = "device-orientation";
+    PermissionType["DeviceMotion"] = "device-motion";
 })(exports.PermissionType || (exports.PermissionType = {}));
 exports.PermissionState = void 0;
 (function (PermissionState) {
@@ -41,6 +43,296 @@ var GET_USER_MEDIA = (function () {
     }
 })();
 
+var IE_WRAPPER_STORE = [];
+var MEDIA_QUERY_LIST_WRAPPER_STORE = [];
+function isEventListenerCallback(callback) {
+    return (typeof callback === 'function' ||
+        (typeof callback === 'object' && callback !== null && typeof callback.handleEvent === 'function'));
+}
+function isMediaQueryListTarget(target) {
+    return typeof target.media === 'string' && typeof target.matches === 'boolean';
+}
+function findIEWrapper(target, type, callback) {
+    for (var i = 0; i < IE_WRAPPER_STORE.length; i++) {
+        var wrapper = IE_WRAPPER_STORE[i];
+        if (wrapper.target === target && wrapper.type === type && wrapper.callback === callback)
+            return wrapper.wrapper;
+    }
+    return undefined;
+}
+function setIEWrapper(target, type, callback, wrapper) {
+    IE_WRAPPER_STORE.push({ target: target, type: type, callback: callback, wrapper: wrapper });
+}
+function removeIEWrapper(target, type, callback) {
+    for (var i = 0; i < IE_WRAPPER_STORE.length; i++) {
+        var wrapper = IE_WRAPPER_STORE[i];
+        if (wrapper.target === target && wrapper.type === type && wrapper.callback === callback) {
+            IE_WRAPPER_STORE.splice(i, 1);
+            return wrapper.wrapper;
+        }
+    }
+    return undefined;
+}
+function findMediaQueryListWrapper(target, type, callback) {
+    for (var i = 0; i < MEDIA_QUERY_LIST_WRAPPER_STORE.length; i++) {
+        var wrapper = MEDIA_QUERY_LIST_WRAPPER_STORE[i];
+        if (wrapper.target === target && wrapper.type === type && wrapper.callback === callback)
+            return wrapper.wrapper;
+    }
+    return undefined;
+}
+function setMediaQueryListWrapper(target, type, callback, wrapper) {
+    MEDIA_QUERY_LIST_WRAPPER_STORE.push({ target: target, type: type, callback: callback, wrapper: wrapper });
+}
+function removeMediaQueryListWrapper(target, type, callback) {
+    for (var i = 0; i < MEDIA_QUERY_LIST_WRAPPER_STORE.length; i++) {
+        var wrapper = MEDIA_QUERY_LIST_WRAPPER_STORE[i];
+        if (wrapper.target === target && wrapper.type === type && wrapper.callback === callback) {
+            MEDIA_QUERY_LIST_WRAPPER_STORE.splice(i, 1);
+            return wrapper.wrapper;
+        }
+    }
+    return undefined;
+}
+function createMediaQueryListWrapper(callback) {
+    return function (event) {
+        if (typeof callback === 'function') {
+            callback.call(this, event);
+        }
+        else if (callback && typeof callback.handleEvent === 'function') {
+            callback.handleEvent(event);
+        }
+    };
+}
+function capitalize(_) {
+    var groups = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        groups[_i - 1] = arguments[_i];
+    }
+    var result = '';
+    for (var i = 0; i < groups.length - 2; i++) {
+        var arg = groups[i];
+        if (typeof arg !== 'undefined')
+            result = result + arg.charAt(0).toUpperCase() + arg.slice(1);
+    }
+    return result;
+}
+function withVendor(target, type) {
+    if (target === globalThis.document && ['deviceready', 'pause', 'resume', 'backbutton', 'menubutton', 'searchbutton', 'startcallbutton', 'endcallbutton', 'volumedownbutton', 'volumeupbutton', 'activated', 'cordovacallbackerror'].indexOf(type) > -1)
+        return type;
+    if (typeof target.webkitEnterFullscreen === 'function' && ['webkitbeginfullscreen', 'webkitendfullscreen', 'webkitpresentationmodechanged'].indexOf(type) > -1)
+        return type;
+    var types;
+    if (typeof LEGACY_TYPE_MAP[type] !== 'undefined')
+        types = LEGACY_TYPE_MAP[type];
+    else if (EVENT_TYPE_REGEXP.test(type))
+        types = [type, type.replace(EVENT_TYPE_REGEXP, capitalize)];
+    else
+        types = [type];
+    for (var i = 0; i < VENDORS.length; i++) {
+        for (var j = 0; j < types.length; j++) {
+            var name_1 = VENDORS[i] + types[j];
+            if (typeof target['on' + name_1] !== 'undefined')
+                return name_1;
+        }
+    }
+    return type;
+}
+function preventDefaultPolyfill() {
+    this.returnValue = false;
+}
+function stopPropagationPolyfill() {
+    this.cancelBubble = true;
+}
+var EVENT_TYPE_REGEXP = /(animation)(start|iteration|end|cancel)|(transition)(start|run|end|cancel)|(fullscreen)(change|error)|(lost|got)(pointer)(capture)|(pointer)(lock)(change|error)|(pointer)(cancel|down|enter|leave|move|out|over|up)/i;
+var VENDORS = ['', 'webkit', 'moz', 'ms', 'MS', 'o', 'O'];
+var LEGACY_TYPE_MAP = {
+    'wheel': ['wheel', 'mousewheel', 'DOMMouseScroll'],
+    'focus': ['focus', 'focusin'],
+    'blur': ['blur', 'focusout'],
+    'beforeinput': ['beforeinput', 'textInput'],
+};
+var EventListener = {
+    useStd: typeof globalThis.document.addEventListener === 'function',
+    add: function (target, eventListenerOptions) {
+        if (typeof eventListenerOptions.type === 'undefined')
+            return;
+        if (typeof target === 'undefined')
+            return;
+        var callback = eventListenerOptions.callback;
+        var type = withVendor(target, eventListenerOptions.type);
+        var options = eventListenerOptions.options;
+        if (isMediaQueryListTarget(target)) {
+            if (typeof target.addListener === 'function') {
+                try {
+                    var wrapper = findMediaQueryListWrapper(target, type, callback);
+                    if (typeof wrapper === 'undefined') {
+                        setMediaQueryListWrapper(target, type, callback, wrapper = createMediaQueryListWrapper(callback));
+                    }
+                    return target.addListener(wrapper);
+                }
+                catch (_) {
+                }
+            }
+        }
+        if (typeof target.addEventListener === 'function') {
+            try {
+                if (isEventListenerCallback(callback)) {
+                    return target.addEventListener(type, callback, options);
+                }
+            }
+            catch (_) {
+            }
+        }
+        if (typeof target.attachEvent === 'function') {
+            var existing = findIEWrapper(target, type, callback);
+            if (typeof existing === 'function')
+                return;
+            var wrapper = function (event) {
+                if (typeof event === 'undefined')
+                    event = globalThis.event;
+                if (typeof event === 'undefined')
+                    return;
+                try {
+                    Object.defineProperty(event, 'currentTarget', { value: target, configurable: true });
+                }
+                catch (_) {
+                }
+                if (typeof event.preventDefault !== 'function')
+                    event.preventDefault = preventDefaultPolyfill.bind(event);
+                if (typeof event.stopPropagation !== 'function')
+                    event.stopPropagation = stopPropagationPolyfill.bind(event);
+                if (typeof callback === 'function')
+                    callback.call(target, event);
+                else if (callback && typeof callback.handleEvent === 'function')
+                    callback.handleEvent(event);
+            };
+            setIEWrapper(target, type, callback, wrapper);
+            return target.attachEvent('on' + type, wrapper);
+        }
+    },
+    remove: function (target, eventListenerOptions) {
+        if (typeof eventListenerOptions.type === 'undefined')
+            return;
+        if (typeof target === 'undefined')
+            return;
+        var callback = eventListenerOptions.callback;
+        var type = withVendor(target, eventListenerOptions.type);
+        var options = eventListenerOptions.options;
+        if (isMediaQueryListTarget(target)) {
+            if (typeof target.removeListener === 'function') {
+                try {
+                    var wrapper = removeMediaQueryListWrapper(target, type, callback);
+                    if (typeof wrapper === 'function')
+                        return target.removeListener(wrapper);
+                }
+                catch (_) {
+                }
+            }
+            return;
+        }
+        if (typeof target.removeEventListener === 'function') {
+            try {
+                if (isEventListenerCallback(callback)) {
+                    return target.removeEventListener(type, callback, options);
+                }
+            }
+            catch (_) {
+            }
+        }
+        if (typeof target.detachEvent === 'function') {
+            var wrapper = removeIEWrapper(target, type, callback);
+            if (typeof wrapper === 'function')
+                target.detachEvent('on' + type, wrapper);
+            return;
+        }
+    },
+};
+
+function createCustomError(name, Base) {
+    if (Base === void 0) { Base = Error; }
+    function CustomError(message) {
+        if (!(this instanceof CustomError))
+            return new CustomError(message);
+        var error = (function () {
+            if (typeof message === 'undefined')
+                return new Base('');
+            return new Base(message);
+        })();
+        if (typeof Object.setPrototypeOf === 'function')
+            Object.setPrototypeOf(error, CustomError.prototype);
+        else
+            error.__proto__ = CustomError.prototype;
+        error.name = name;
+        if (typeof message !== 'undefined')
+            error.message = message;
+        if (typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+            try {
+                Object.defineProperty(error, Symbol.toStringTag, {
+                    value: name,
+                    writable: false,
+                    enumerable: false,
+                    configurable: true
+                });
+            }
+            catch (_) {
+            }
+        }
+        if (typeof Error.captureStackTrace === 'function') {
+            Error.captureStackTrace(error, CustomError);
+        }
+        else if (Base.captureStackTrace && typeof Base.captureStackTrace === 'function') {
+            Base.captureStackTrace(error, CustomError);
+        }
+        else {
+            try {
+                var tempError = new Base();
+                if (tempError.stack)
+                    error.stack = tempError.stack;
+            }
+            catch (_) {
+            }
+        }
+        return error;
+    }
+    CustomError.prototype = Object.create(Base.prototype, {
+        constructor: {
+            value: CustomError,
+            writable: true,
+            enumerable: false,
+            configurable: true
+        }
+    });
+    try {
+        Object.defineProperty(CustomError.prototype, 'name', {
+            value: name,
+            writable: true,
+            enumerable: false,
+            configurable: true
+        });
+    }
+    catch (_) {
+        try {
+            CustomError.prototype.name = name;
+        }
+        catch (_) {
+        }
+    }
+    try {
+        Object.defineProperty(CustomError, 'name', {
+            value: name,
+            writable: false,
+            enumerable: false,
+            configurable: true
+        });
+    }
+    catch (_) {
+    }
+    return CustomError;
+}
+
+var NotSupportedError = createCustomError('NotSupportedError');
+
 var Permission = {
     get supported() {
         return supported();
@@ -51,14 +343,45 @@ var Permission = {
         PermissionType: exports.PermissionType,
         PermissionState: exports.PermissionState,
     },
-    Errors: {},
+    Errors: {
+        NotSupportedError: NotSupportedError,
+    },
 };
+function toPermissionState(permission) {
+    switch (permission) {
+        case 'granted':
+            return exports.PermissionState.Grant;
+        case 'denied':
+            return exports.PermissionState.Denied;
+        case 'prompt':
+        case 'default':
+            return exports.PermissionState.Prompt;
+        default:
+            return exports.PermissionState.Unsupported;
+    }
+}
+function toSafariSensorEventMap(type) {
+    switch (type) {
+        case exports.PermissionType.DeviceOrientation:
+            return {
+                event: globalThis.DeviceOrientationEvent,
+                type: 'deviceorientation',
+            };
+        case exports.PermissionType.DeviceMotion:
+            return {
+                event: globalThis.DeviceMotionEvent,
+                type: 'devicemotion',
+            };
+        default:
+            return undefined;
+    }
+}
 function supported() {
     return typeof globalThis.navigator.permissions !== 'undefined';
 }
 function request(type) {
     var instance = this;
-    return new Promise(function (resolve) {
+    return new Promise(function (resolve, reject) {
         function resolveAfterCheck() {
             instance.check(type).then(resolve);
         }
@@ -70,17 +393,8 @@ function request(type) {
                 case exports.PermissionType.Notification:
                     if (typeof globalThis.Notification === 'undefined')
                         return resolve(exports.PermissionState.Unsupported);
-                    globalThis.Notification.requestPermission().then(function (value) {
-                        switch (value) {
-                            case 'default':
-                                return resolve(exports.PermissionState.Prompt);
-                            case 'granted':
-                                return resolve(exports.PermissionState.Grant);
-                            case 'denied':
-                                return resolve(exports.PermissionState.Denied);
-                            default:
-                                resolveAfterCheck();
-                        }
+                    globalThis.Notification.requestPermission().then(function (permission) {
+                        resolve(toPermissionState(permission));
                     });
                     break;
                 case exports.PermissionType.Geolocation:
@@ -118,6 +432,23 @@ function request(type) {
                         .then(resolveAfterCheck)
                         .catch(resolveAfterCheck);
                     break;
+                case exports.PermissionType.DeviceOrientation:
+                case exports.PermissionType.DeviceMotion:
+                    var sensorEventMap = toSafariSensorEventMap(type);
+                    if (typeof sensorEventMap === 'undefined' || typeof sensorEventMap.event === 'undefined')
+                        return resolve(exports.PermissionState.Unsupported);
+                    if (typeof sensorEventMap.event.requestPermission !== 'function')
+                        return resolve(exports.PermissionState.Grant);
+                    try {
+                        sensorEventMap.event.requestPermission()
+                            .then(function (permission) {
+                            resolve(toPermissionState(permission));
+                        });
+                    }
+                    catch (_) {
+                        return reject(new NotSupportedError('\'DeviceOrientationEvent.requestPermission()\' must be called within a user gesture context.'));
+                    }
+                    break;
                 default:
                     return resolve(exports.PermissionState.Unsupported);
             }
@@ -125,6 +456,34 @@ function request(type) {
     });
 }
 function check(type) {
+    if (type === exports.PermissionType.DeviceOrientation || type === exports.PermissionType.DeviceMotion) {
+        return new Promise(function (resolve) {
+            var sensorEventMap = toSafariSensorEventMap(type);
+            if (typeof sensorEventMap === 'undefined' || typeof sensorEventMap.event === 'undefined')
+                return resolve(exports.PermissionState.Unsupported);
+            if (typeof sensorEventMap.event.requestPermission !== 'function')
+                return resolve(exports.PermissionState.Grant);
+            var granted = false;
+            EventListener.add(globalThis, {
+                type: sensorEventMap.type,
+                callback: function () {
+                    granted = true;
+                },
+                options: { once: true }
+            });
+            setTimeout(function () {
+                if (granted)
+                    return resolve(exports.PermissionState.Grant);
+                sensorEventMap.event.requestPermission()
+                    .then(function (permission) {
+                    resolve(toPermissionState(permission));
+                })
+                    .catch(function () {
+                    resolve(exports.PermissionState.Prompt);
+                });
+            }, 50);
+        });
+    }
     return new Promise(function (resolve) {
         if (typeof globalThis.navigator.permissions === 'undefined')
             return resolve(exports.PermissionState.Unsupported);

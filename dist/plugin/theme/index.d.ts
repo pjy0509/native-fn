@@ -1,8 +1,8 @@
 declare interface ThemeInstance {
     get value(): string | undefined;
     set value(color: string | undefined);
-    Constants: {};
-    Errors: {};
+    readonly Constants: {};
+    readonly Errors: {};
 }
 
 declare const Theme: ThemeInstance;

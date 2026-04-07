@@ -3,6 +3,6 @@ export declare interface ThemeInstance {
 
     set value(color: string | undefined);
 
-    Constants: {};
-    Errors: {};
+    readonly Constants: {};
+    readonly Errors: {};
 }

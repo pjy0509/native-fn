@@ -26,8 +26,8 @@ export declare interface BatteryInstance {
 
     onChange(listener: (battery: BatteryManager) => void, options?: AddEventListenerOptions): () => void;
 
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError,
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
     };
 }

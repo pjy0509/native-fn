@@ -34,7 +34,7 @@ export declare enum Browsers {
     IE = "IE",
     SamsungInternet = "SamsungInternet"
 }
-export declare const USER_AGENT: string;
+export declare let USER_AGENT: string;
 export declare const HIGH_ENTROPY_BRAND_NAME_MAP: Record<string, string>;
 export declare const RTL_LANGUAGES: string[];
 export declare const OS_RESOLVER_MAP: [RegExp, OS, VersionResolver?][];

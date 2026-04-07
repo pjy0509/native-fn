@@ -6,10 +6,10 @@ declare interface GeolocationInstance {
     get supported(): boolean;
     get value(): Promise<GeolocationCoordinates>;
     onChange(listener: (coordinates: GeolocationCoordinates) => void, options?: AddEventListenerOptions): () => void;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
-        PermissionNotGrantedError: typeof PermissionNotGrantedError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly PermissionNotGrantedError: typeof PermissionNotGrantedError;
     };
 }
 

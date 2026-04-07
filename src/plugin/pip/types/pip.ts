@@ -22,15 +22,15 @@ export declare interface PipInstance {
 
     onError(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
 
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError,
-        InvalidStateError: typeof InvalidStateError,
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly InvalidStateError: typeof InvalidStateError;
     };
 }
 
 export declare interface PipEventPayload {
-    nativeEvent: Event;
-    element: HTMLVideoElement;
-    isActive: boolean;
+    readonly nativeEvent: Event;
+    readonly element: HTMLVideoElement;
+    readonly isActive: boolean;
 }

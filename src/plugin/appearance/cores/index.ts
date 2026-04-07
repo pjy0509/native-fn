@@ -1,4 +1,4 @@
-import {Appearances, CONTEXT, MEDIA_QUERY_LIST, SVG_PIXEL_DATA_URL} from "../constants";
+import {Appearances, CONTEXT, PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST, SVG_PIXEL_DATA_URL} from "../constants";
 import {AppearanceInstance} from "../types";
 import Platform from "../../platform/cores";
 import {Browsers} from "../../platform";
@@ -6,7 +6,7 @@ import EventListener from "../../../utils/event-listener";
 import {SubscriptionManager} from "../../../types/subscription-manager";
 import createSubscriptionManager from "../../../utils/create-subscription-manager";
 
-const onChangeSubscriptionManager: SubscriptionManager<AppearanceInstance, Appearances> = createSubscriptionManager<AppearanceInstance, Appearances>(attachOnChange, detachOnChange);
+const onChangeSubscriptionManager: SubscriptionManager<Appearances> = createSubscriptionManager<Appearances>(attachOnChange, detachOnChange);
 let appearanceRef: Appearances | null = null;
 let pollingIntervalId: number | null = null;
 
@@ -37,8 +37,8 @@ function getAppearanceFromEngine(): Appearances {
 }
 
 function getAppearanceFromMediaQuery(): Appearances {
-    if (MEDIA_QUERY_LIST.media === 'not all') return Appearances.Unknown;
-    if (MEDIA_QUERY_LIST.matches) return Appearances.Dark;
+    if (PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST.media === 'not all') return Appearances.Unknown;
+    if (PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST.matches) return Appearances.Dark;
     return Appearances.Light;
 }
 
@@ -73,7 +73,7 @@ function stopPolling(): void {
 function attachOnChange(): void {
     appearanceRef = getAppearanceFromMediaQuery();
 
-    EventListener.add(MEDIA_QUERY_LIST, {type: 'change', callback: onMediaChange});
+    EventListener.add(PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST, {type: 'change', callback: onMediaChange});
 
     if (Platform.browser.name === Browsers.SamsungInternet) startPolling();
 }
@@ -81,7 +81,7 @@ function attachOnChange(): void {
 function detachOnChange(): void {
     appearanceRef = null;
 
-    EventListener.remove(MEDIA_QUERY_LIST, {type: 'change', callback: onMediaChange});
+    EventListener.remove(PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST, {type: 'change', callback: onMediaChange});
 
     if (Platform.browser.name === Browsers.SamsungInternet) stopPolling();
 }

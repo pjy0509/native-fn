@@ -5,8 +5,8 @@ export declare interface AppearanceInstance {
 
     onChange(listener: (appearance: Appearances) => void, options?: AddEventListenerOptions): () => void;
 
-    Constants: {
-        Appearances: typeof Appearances;
+    readonly Constants: {
+        readonly Appearances: typeof Appearances;
     };
-    Errors: {};
+    readonly Errors: {};
 }

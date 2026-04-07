@@ -14,24 +14,24 @@ export declare interface PlatformInstance {
     get isNode(): boolean;
     get isStandalone(): boolean;
     get isWebview(): boolean;
-    Constants: {
-        OS: typeof OS;
-        Engines: typeof Engines;
-        Browsers: typeof Browsers;
-        Devices: typeof Devices;
+    readonly Constants: {
+        readonly OS: typeof OS;
+        readonly Engines: typeof Engines;
+        readonly Browsers: typeof Browsers;
+        readonly Devices: typeof Devices;
     };
-    Errors: {};
+    readonly Errors: {};
 }
 export declare interface NameVersionPair<T> {
-    name: T;
-    version: string;
+    readonly name: T;
+    readonly version: string;
 }
 export declare interface Locale {
-    language: string | null;
-    languages: string[];
-    timezone: string | null;
-    offset: number;
-    isRTL: boolean;
+    readonly language: string | null;
+    readonly languages: readonly string[];
+    readonly timezone: string | null;
+    readonly offset: number;
+    readonly isRTL: boolean;
 }
 export interface GPUAdapterInfo {
     readonly vendor?: string;

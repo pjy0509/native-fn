@@ -1,10 +1,15 @@
-import { EnvironmentPresetKey, EnvironmentPresetValues } from "../types";
+import { EnvironmentObserver, EnvironmentPresetKey } from "../types";
 declare global {
     interface Navigator {
         readonly virtualKeyboard?: VirtualKeyboard;
+        readonly devicePosture?: DevicePosture;
     }
+    var viewport: BrowsingContextViewport | undefined;
 }
-type ChangeCallback<K extends EnvironmentPresetKey> = (values: EnvironmentPresetValues<K>) => void;
+interface DevicePosture extends EventTarget {
+    readonly type: 'continuous' | 'folded';
+    onchange: ((this: DevicePosture, ev: Event) => any) | null;
+}
 interface VirtualKeyboardEventMap {
     geometrychange: Event;
 }
@@ -16,9 +21,13 @@ interface VirtualKeyboard extends EventTarget {
     addEventListener<K extends keyof VirtualKeyboardEventMap>(type: K, listener: (this: VirtualKeyboard, ev: VirtualKeyboardEventMap[K]) => any, options?: AddEventListenerOptions): void;
     removeEventListener<K extends keyof VirtualKeyboardEventMap>(type: K, listener: (this: VirtualKeyboard, ev: VirtualKeyboardEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
 }
-export type EnvObserver<K extends EnvironmentPresetKey> = {
-    get(): EnvironmentPresetValues<K>;
-    onChange(callback: ChangeCallback<K>, options?: AddEventListenerOptions): () => void;
-};
-export default function createEnvObserver<K extends EnvironmentPresetKey>(preset: K): EnvObserver<K>;
+interface BrowsingContextViewportEventMap {
+    change: Event;
+}
+interface BrowsingContextViewport extends EventTarget {
+    readonly segments: ReadonlyArray<DOMRectReadOnly> | null;
+    addEventListener<K extends keyof BrowsingContextViewportEventMap>(type: K, listener: (this: BrowsingContextViewport, ev: BrowsingContextViewportEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+    removeEventListener<K extends keyof BrowsingContextViewportEventMap>(type: K, listener: (this: BrowsingContextViewport, ev: BrowsingContextViewportEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+}
+export default function createEnvObserver<K extends EnvironmentPresetKey>(preset: K): EnvironmentObserver<K>;
 export {};

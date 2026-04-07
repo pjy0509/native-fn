@@ -9,6 +9,13 @@
 <script>
 </script>
 <body>
+<input type="text">
+<div>
+
+</div>
+<div id="t">
+
+</div>
 </body>
 
 <script type="module">
@@ -18,5 +25,18 @@
 </script>
 
 <script>
+	window.onload = async () => {
+		document.querySelector('div').innerHTML = '<pre>' + JSON.stringify(Native.platform, null, 4) + '</pre>'
+
+
+		navigator.virtualKeyboard.overlaysContent = true;
+		let i = 0;
+		function t() {
+			document.getElementById("t").innerText = String(JSON.stringify(navigator.virtualKeyboard.boundingRect)) +  i++
+			setTimeout(t, 1000)
+        }
+		t()
+		Native.dimension.environment.keyboardInset.onChange((e) => document.querySelector('div').innerHTML = '<pre>' + JSON.stringify(e, null, 4) + '</pre>');
+	}
 </script>
 </html>

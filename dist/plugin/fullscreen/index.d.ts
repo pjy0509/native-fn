@@ -13,16 +13,16 @@ declare interface FullscreenInstance {
     onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
     onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
     onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
-        InvalidStateError: typeof InvalidStateError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly InvalidStateError: typeof InvalidStateError;
     };
 }
 declare interface FullscreenEventPayload {
-    nativeEvent: Event;
-    element: Element;
-    isActive: boolean;
+    readonly nativeEvent: Event;
+    readonly element: Element;
+    readonly isActive: boolean;
 }
 
 declare global {

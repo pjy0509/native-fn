@@ -51,6 +51,8 @@ yarn add native-fn
     - [paste](#clipboard-paste)
 - **[dimension](#dimension)**
     - [value](#dimension-value)
+    - [screenOrientation](#dimension-screenorientation)
+    - [deviceOrientation](#dimension-deviceorientation)
     - [environment](#dimension-environment)
     - [onChange](#dimension-onchange)
 - **[fullscreen](#fullscreen)**
@@ -515,7 +517,7 @@ Promise<string>
 
 ## dimension
 
-[`value`](#dimension-value) · [`environment`](#dimension-environment) · [`onChange`](#dimension-onchange)
+[`value`](#dimension-value) · [`screenOrientation`](#dimension-screenorientation) · [`deviceOrientation`](#dimension-deviceorientation) · [`environment`](#dimension-environment) · [`onChange`](#dimension-onchange)
 
 <h3 id="dimension-value"><code>dimension.value</code></h3>
 
@@ -525,19 +527,15 @@ Promise<string>
 get value(): Dimensions
 ```
 
-Returns current viewport dimensions, device pixel ratio, and orientation.
+Returns current viewport dimensions, device pixel ratio.
 
 **Example**
 
 ```ts
-const { innerWidth, innerHeight, outerWidth, outerHeight, scale, orientation } = Native.dimension.value;
+const { innerWidth, innerHeight, outerWidth, outerHeight, scale } = Native.dimension.value;
 
 console.log(innerWidth, innerHeight); // visible viewport size
 console.log(scale);                   // device pixel ratio e.g. 2, 3
-
-if (orientation === Orientation.Portrait) {
-    console.log('Portrait mode');
-}
 ```
 
 **Returns**
@@ -549,19 +547,138 @@ Dimensions
 
 ```ts
 interface Dimensions {
-    outerWidth:  number;
-    outerHeight: number;
-    innerWidth:  number;
-    innerHeight: number;
-    scale:       number;
-    orientation: Orientation;
+    readonly outerWidth:  number;
+    readonly outerHeight: number;
+    readonly innerWidth:  number;
+    readonly innerHeight: number;
+    readonly scale:       number;
+}
+```
+
+---
+
+<h3 id="dimension-screenorientation"><code>dimension.screenOrientation</code></h3>
+
+**Signature**
+
+```ts
+screenOrientation: ScreenOrientationInstance
+```
+
+Provides access to the current screen orientation and subscribes to its changes.
+
+**Example**
+
+```ts
+// Check support
+if (Native.dimension.screenOrientation.supported) {
+    const orientation = Native.dimension.screenOrientation.value;
+    console.log(orientation); // e.g. Orientation.PortraitPrimary
+}
+
+// Subscribe to orientation changes
+const unsubscribe = Native.dimension.screenOrientation.onChange((orientation) => {
+    console.log(orientation); // Orientation.LandscapePrimary, etc.
+});
+
+unsubscribe();
+```
+
+**Returns**
+
+```ts
+ScreenOrientationInstance
+```
+
+
+```ts
+interface ScreenOrientationInstance {
+    get supported(): boolean;
+
+    readonly value: Orientation;
+
+    onChange(listener: (value: Orientation) => void, options?: AddEventListenerOptions): () => void;
 }
 
 enum Orientation {
-    Portrait  = 'portrait',
-    Landscape = 'landscape',
-    Unknown   = 'unknown',
+    PortraitPrimary = 'portrait-primary',
+    PortraitSecondary = 'portrait-secondary',
+    LandscapePrimary = 'landscape-primary',
+    LandscapeSecondary = 'landscape-secondary',
 }
+```
+
+**Throws**
+
+```ts
+throw new NotSupportedError // Thrown when screen.orientation, window.orientation, and the orientation media query are all unsupported'
+```
+
+---
+
+<h3 id="dimension-deviceorientation"><code>dimension.deviceOrientation</code></h3>
+
+**Signature**
+
+```ts
+deviceOrientation: DeviceOrientationInstance
+```
+
+Provides access to the physical device orientation (alpha, beta, gamma) via the DeviceOrientationEvent API. On iOS 13+, permission must be explicitly granted by the user.
+
+**Example**
+
+```ts
+// Check support
+if (Native.dimension.deviceOrientation.supported) {
+
+    // Get current value (triggers permission prompt on iOS if needed)
+    const { alpha, beta, gamma, absolute } = await Native.dimension.deviceOrientation.value;
+    console.log(alpha, beta, gamma); // rotation angles in degrees
+
+    // Subscribe to real-time orientation changes
+    const unsubscribe = Native.dimension.deviceOrientation.onChange((value) => {
+        console.log(value.alpha);    // Z-axis rotation: 0 ~ 360
+        console.log(value.beta);     // X-axis tilt: -180 ~ 180
+        console.log(value.gamma);    // Y-axis tilt: -90 ~ 90
+        console.log(value.absolute); // true if relative to Earth's coordinate frame
+    });
+
+    unsubscribe();
+}
+```
+
+**Returns**
+
+```ts
+DeviceOrientationInstance
+```
+
+
+```ts
+interface DeviceOrientationInstance {
+    get supported(): boolean;
+
+    readonly value: Promise<DeviceOrientationValue>;
+
+    onChange(listener: (value: DeviceOrientationValue) => void, options?: AddEventListenerOptions): () => void;
+}
+
+interface DeviceOrientationValue {
+    readonly alpha:    number | null; // Z-axis rotation (0–360)
+    readonly beta:     number | null; // X-axis tilt (-180–180)
+    readonly gamma:    number | null; // Y-axis tilt (-90–90)
+    readonly absolute: boolean;       // Earth-relative if true
+}
+```
+
+**Throws**
+
+```ts
+throw new NotSupportedError // Thrown when window.DeviceOrientationEvent is not available in the current environment.
+```
+```ts
+throw new PermissionNotGrantedError // Thrown on iOS 13+ when the user denies the deviceorientation permission request.
 ```
 
 ---
@@ -592,6 +709,16 @@ const unsubscribe = Native.dimension.environment.safeAreaInset.onChange((inset) 
     document.body.style.paddingBottom = inset.bottom + 'px';
 });
 unsubscribe();
+
+// Sync safe area insets to CSS variables
+// Usage in CSS: var(--sai-top), var(--sai-bottom), var(--sai-left), var(--sai-right)
+const releaseSai = Native.dimension.environment.safeAreaInset.useCssVariable('sai');
+releaseSai(); // removes all --sai-* variables
+
+// Sync viewport segments to CSS variables (e.g. foldable devices)
+// Usage in CSS: var(--vs-0-width), var(--vs-0-height), var(--vs-1-top), ...
+const releaseVs = Native.dimension.environment.viewportSegment.useCssVariable('vs');
+releaseVs(); // removes all --vs-{index}-* variables
 ```
 
 **Returns**
@@ -603,16 +730,30 @@ Environment
 
 ```ts
 interface Environment {
-    safeAreaInset:    EnvironmentPreset<'safe-area-inset'>;
-    safeAreaMaxInset: EnvironmentPreset<'safe-area-max-inset'>;
-    keyboardInset:    EnvironmentPreset<'keyboard-inset'>;
-    titlebarArea:     EnvironmentPreset<'titlebar-area'>;
-    viewportSegment:  EnvironmentPreset<'viewport-segment'>;
+    safeAreaInset:    EnvironmentObserver<'safe-area-inset'>;
+    safeAreaMaxInset: EnvironmentObserver<'safe-area-max-inset'>;
+    keyboardInset:    EnvironmentObserver<'keyboard-inset'>;
+    titlebarArea:     EnvironmentObserver<'titlebar-area'>;
+    viewportSegment:  EnvironmentObserver<'viewport-segment'>;
 }
 
-interface EnvironmentPreset<K> {
-    get value(): EnvironmentPresetValues<K>;
-    onChange(listener: (value: EnvironmentPresetValues<K>) => void, options?: AddEventListenerOptions): () => void;
+type EnvironmentObserver<K extends EnvironmentPresetKey> =
+    K extends 'viewport-segment'
+        ? SegmentsObserver
+        : {
+            get value(): EnvironmentPresetValues<K>;
+
+            onChange(listener: (value: EnvironmentPresetValues<K>) => void, options?: AddEventListenerOptions): () => void;
+
+            useCssVariable(prefix: string): () => void;
+        };
+
+interface SegmentsObserver {
+    get value(): EnvironmentPresetValues<'viewport-segment'>[];
+
+    onChange(listener: (value: EnvironmentPresetValues<'viewport-segment'>[]) => void, options?: AddEventListenerOptions): () => void;
+
+    useCssVariable(prefix: string): () => void;
 }
 ```
 
@@ -626,14 +767,13 @@ interface EnvironmentPreset<K> {
 onChange(listener: (dimension: Dimensions) => void, options?: AddEventListenerOptions): () => void
 ```
 
-Subscribes to viewport dimension and orientation changes.
+Subscribes to viewport dimension change.
 
 **Example**
 
 ```ts
 const unsubscribe = Native.dimension.onChange((dimension) => {
     console.log(dimension.innerWidth, dimension.innerHeight);
-    console.log(dimension.orientation); // 'portrait' | 'landscape'
 });
 
 unsubscribe();
@@ -1889,12 +2029,14 @@ Promise<PermissionState>
 
 ```ts
 enum PermissionType {
-    Notification  = 'notifications',
-    Geolocation   = 'geolocation',
-    Camera        = 'camera',
-    ClipboardRead = 'clipboard-read',
-    Microphone    = 'microphone',
-    MIDI          = 'midi',
+    Notification      = 'notifications',
+    Geolocation       = 'geolocation',
+    Camera            = 'camera',
+    ClipboardRead     = 'clipboard-read',
+    Microphone        = 'microphone',
+    MIDI              = 'midi',
+    DeviceOrientation = 'device-orientation',
+    DeviceMotion      = 'device-motion',
 }
 
 enum PermissionState {
@@ -1997,7 +2139,7 @@ Returns the video element currently in Picture-in-Picture, or null if not active
 
 ```ts
 const el = Native.pip.element;
- 
+
 if (el !== null) {
     console.log(el.src); // currently PiP video source
 }
@@ -2080,7 +2222,7 @@ flowchart TD
 ```ts
 // Default: first video element
 await Native.pip.request();
- 
+
 // Specific video element
 await Native.pip.request(document.querySelector('video#player'));
 ```
@@ -2177,7 +2319,7 @@ Toggles Picture-in-Picture for a video element.
 ```ts
 // Default: first video element
 await Native.pip.toggle();
- 
+
 // Specific video element
 await Native.pip.toggle(document.querySelector('video#player'));
 ```
@@ -2215,7 +2357,7 @@ throw new InvalidStateError // PiP transition already in progress
 
 ```ts
 onChange(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
-onChange(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
+    onChange(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to Picture-in-Picture state changes.
@@ -2228,7 +2370,7 @@ const unsubscribe = Native.pip.onChange((payload) => {
     console.log(payload.element);     // HTMLVideoElement
     console.log(payload.nativeEvent); // Event
 });
- 
+
 unsubscribe();
 ```
 
@@ -2252,7 +2394,7 @@ unsubscribe();
 
 ```ts
 onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
-onError(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
+    onError(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void
 ```
 
 Subscribes to Picture-in-Picture errors.
@@ -2323,8 +2465,8 @@ NameVersionPair<OS>
 
 ```ts
 interface NameVersionPair<T> {
-    name:    T;
-    version: string;
+    readonly name:    T;
+    readonly version: string;
 }
 
 enum OS {
@@ -2488,11 +2630,11 @@ Locale
 
 ```ts
 interface Locale {
-    language:  string | null;
-    languages: string[];
-    timezone:  string | null;
-    offset:    number;
-    isRTL:     boolean;
+    readonly language:  string | null;
+    readonly languages: string[];
+    readonly timezone:  string | null;
+    readonly offset:    number;
+    readonly isRTL:     boolean;
 }
 ```
 
@@ -2529,10 +2671,10 @@ GPU
 
 ```ts
 interface GPU {
-    vendor?:       string;
-    architecture?: string;
-    device?:       string;
-    description?:  string;
+    readonly vendor?:       string;
+    readonly architecture?: string;
+    readonly device?:       string;
+    readonly description?:  string;
 }
 ```
 

@@ -7,8 +7,8 @@ export declare interface VibrationInstance {
 
     stop(): boolean;
 
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError,
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError,
     };
 }

@@ -25,11 +25,11 @@ exports.Appearances = void 0;
     Appearances["Light"] = "light";
     Appearances["Dark"] = "dark";
 })(exports.Appearances || (exports.Appearances = {}));
-exports.MEDIA_QUERY_LIST = void 0;
+exports.PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST = void 0;
 if (typeof globalThis.matchMedia !== 'undefined')
-    exports.MEDIA_QUERY_LIST = globalThis.matchMedia('(prefers-color-scheme: dark)');
+    exports.PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST = globalThis.matchMedia('(prefers-color-scheme: dark)');
 else
-    exports.MEDIA_QUERY_LIST = FALLBACK_MEDIA_QUERY_LIST;
+    exports.PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST = FALLBACK_MEDIA_QUERY_LIST;
 var CONTEXT = globalThis.document.createElement('canvas').getContext('2d', { willReadFrequently: true });
 var SVG_PIXEL_DATA_URL = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik0wIDBoMXYxSDB6Ii8+PC9zdmc+';
 
@@ -122,11 +122,11 @@ var Browsers;
     Browsers["IE"] = "IE";
     Browsers["SamsungInternet"] = "SamsungInternet";
 })(Browsers || (Browsers = {}));
-var USER_AGENT = (function () {
-    if (typeof globalThis.navigator.userAgent !== 'undefined')
-        return globalThis.navigator.userAgent;
-    return '';
-})();
+var USER_AGENT;
+if (typeof globalThis.navigator.userAgent !== 'undefined')
+    USER_AGENT = globalThis.navigator.userAgent;
+else
+    USER_AGENT = '';
 var HIGH_ENTROPY_BRAND_NAME_MAP = {
     'Google Chrome': 'Chrome',
     'Microsoft Edge': 'Edge',
@@ -402,9 +402,11 @@ var EventListener = {
 
 var currentUserAgent = USER_AGENT;
 var parsedCache = null;
-var parsedFromHighEntropyValuesOS = {};
-var parsedFromHighEntropyValuesBrowser = {};
-var parsedFromHighEntropyValuesEngine = {};
+var parsedFromHighEntropyValuesOSName = undefined;
+var parsedFromHighEntropyValuesOSVersion = undefined;
+var parsedFromHighEntropyValuesBrowserName = undefined;
+var parsedFromHighEntropyValuesBrowserVersion = undefined;
+var parsedFromHighEntropyValuesEngineVersion = undefined;
 var parsedFromHighEntropyValuesDevice = null;
 function resolveVersion(string, resolver) {
     if (typeof resolver === 'function')
@@ -434,71 +436,72 @@ function getParsedCache() {
     return parsedCache;
 }
 function parseOS() {
-    var result = { name: OS.Unknown, version: '' };
+    var name = OS.Unknown;
+    var version = '';
     for (var i = 0; i < OS_RESOLVER_MAP.length; i++) {
         var map = OS_RESOLVER_MAP[i];
         var matched = currentUserAgent.match(map[0]);
         if (matched !== null) {
-            result.name = map[1];
-            result.version = resolveVersion(matched[1], map[2]);
+            name = map[1];
+            version = resolveVersion(matched[1], map[2]);
             break;
         }
     }
-    if (result.name === OS.iOS && compareVersion(result.version, '18.6') === 0) {
-        var version = /\) Version\/([\d.]+)/.exec(currentUserAgent);
-        if (version !== null) {
-            var major = parseInt(version[1].split('.')[0], 10);
+    if (name === OS.iOS && compareVersion(version, '18.6') === 0) {
+        var execs = /\) Version\/([\d.]+)/.exec(currentUserAgent);
+        if (execs !== null) {
+            var major = parseInt(execs[1].split('.')[0], 10);
             if (major >= 26)
-                result.version = version[1];
+                version = execs[1];
         }
     }
     if (currentUserAgent === USER_AGENT) {
-        if (typeof parsedFromHighEntropyValuesOS.name !== 'undefined')
-            result.name = parsedFromHighEntropyValuesOS.name;
-        if (typeof parsedFromHighEntropyValuesOS.version !== 'undefined')
-            result.version = parsedFromHighEntropyValuesOS.version;
-        if (result.name === OS.MacOS && typeof globalThis.navigator.standalone !== 'undefined' && globalThis.navigator.maxTouchPoints > 2)
-            result.name = OS.iOS;
+        if (typeof parsedFromHighEntropyValuesOSName !== 'undefined')
+            name = parsedFromHighEntropyValuesOSName;
+        if (typeof parsedFromHighEntropyValuesOSVersion !== 'undefined')
+            version = parsedFromHighEntropyValuesOSVersion;
+        if (name === OS.MacOS && typeof globalThis.navigator.standalone !== 'undefined' && globalThis.navigator.maxTouchPoints > 2)
+            name = OS.iOS;
     }
-    return result;
+    return { name: name, version: version };
 }
 function parseBrowser() {
-    var result = { name: Browsers.Unknown, version: '' };
+    var name = Browsers.Unknown;
+    var version = '';
     for (var i = 0; i < BROWSER_RESOLVER_MAP.length; i++) {
         var map = BROWSER_RESOLVER_MAP[i];
         var matched = currentUserAgent.match(map[0]);
         if (matched !== null) {
-            result.name = map[1];
-            result.version = resolveVersion(matched[1], map[2]);
+            name = map[1];
+            version = resolveVersion(matched[1], map[2]);
             break;
         }
     }
     if (currentUserAgent === USER_AGENT) {
-        if (typeof parsedFromHighEntropyValuesBrowser.name !== 'undefined')
-            result.name = parsedFromHighEntropyValuesBrowser.name;
-        if (typeof parsedFromHighEntropyValuesBrowser.version !== 'undefined')
-            result.version = parsedFromHighEntropyValuesBrowser.version;
+        if (typeof parsedFromHighEntropyValuesBrowserName !== 'undefined')
+            name = parsedFromHighEntropyValuesBrowserName;
+        if (typeof parsedFromHighEntropyValuesBrowserVersion !== 'undefined')
+            version = parsedFromHighEntropyValuesBrowserVersion;
     }
-    return result;
+    return { name: name, version: version };
 }
 function parseEngine() {
-    var result = { name: Engines.Unknown, version: '' };
+    var name = Engines.Unknown;
+    var version = '';
     for (var i = 0; i < ENGINE_RESOLVER_MAP.length; i++) {
         var map = ENGINE_RESOLVER_MAP[i];
         var matched = currentUserAgent.match(map[0]);
         if (matched !== null) {
-            result.name = map[1];
-            result.version = resolveVersion(matched[1], map[2]);
+            name = map[1];
+            version = resolveVersion(matched[1], map[2]);
             break;
         }
     }
     if (currentUserAgent === USER_AGENT) {
-        if (typeof parsedFromHighEntropyValuesEngine.name !== 'undefined')
-            result.name = parsedFromHighEntropyValuesEngine.name;
-        if (typeof parsedFromHighEntropyValuesEngine.version !== 'undefined')
-            result.version = parsedFromHighEntropyValuesEngine.version;
+        if (typeof parsedFromHighEntropyValuesEngineVersion !== 'undefined')
+            version = parsedFromHighEntropyValuesEngineVersion;
     }
-    return result;
+    return { name: name, version: version };
 }
 function parseFromHighEntropyValues() {
     if (typeof globalThis.navigator === 'undefined' || typeof globalThis.navigator.userAgentData === 'undefined' || typeof globalThis.navigator.userAgentData.getHighEntropyValues === 'undefined')
@@ -524,38 +527,38 @@ function parseFromHighEntropyValues() {
                     if (prevBrandName === null || /Chrom/.test(prevBrandName) || !/Chrom/.test(brandName)) {
                         browserName = brandName;
                         if (browserName === 'Chrome' || browserName === 'Chrome WebView' || browserName === 'Chrome Headless')
-                            parsedFromHighEntropyValuesBrowser.name = Browsers.Chrome;
+                            parsedFromHighEntropyValuesBrowserName = Browsers.Chrome;
                         else if (browserName === 'Edge' || browserName === 'Edge WebView2')
-                            parsedFromHighEntropyValuesBrowser.name = Browsers.Edge;
+                            parsedFromHighEntropyValuesBrowserName = Browsers.Edge;
                         else if (browserName === 'Opera Mobi')
-                            parsedFromHighEntropyValuesBrowser.name = Browsers.Opera;
-                        parsedFromHighEntropyValuesBrowser.version = brandVersion;
+                            parsedFromHighEntropyValuesBrowserName = Browsers.Opera;
+                        parsedFromHighEntropyValuesBrowserVersion = brandVersion;
                     }
                     prevBrandName = brandName;
                 }
                 if (brandName === 'Chromium')
-                    parsedFromHighEntropyValuesEngine.version = brandVersion;
+                    parsedFromHighEntropyValuesEngineVersion = brandVersion;
             }
             if (typeof platformVersion === 'string') {
                 if (getParsedCache().os.name === OS.Windows) {
                     if (parseInt(platformVersion.split('.')[0], 10) >= 13)
-                        parsedFromHighEntropyValuesOS.version = '11';
+                        parsedFromHighEntropyValuesOSVersion = '11';
                     else
-                        parsedFromHighEntropyValuesOS.version = '10';
+                        parsedFromHighEntropyValuesOSVersion = '10';
                 }
                 else {
-                    parsedFromHighEntropyValuesOS.version = platformVersion;
+                    parsedFromHighEntropyValuesOSVersion = platformVersion;
                 }
             }
             if (typeof platform === 'string') {
                 if (/android/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = OS.Android;
+                    parsedFromHighEntropyValuesOSName = OS.Android;
                 else if (/ios|iphone|ipad/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = OS.iOS;
+                    parsedFromHighEntropyValuesOSName = OS.iOS;
                 else if (/windows|win32/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = OS.Windows;
+                    parsedFromHighEntropyValuesOSName = OS.Windows;
                 else if (/macos|macintel/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = OS.MacOS;
+                    parsedFromHighEntropyValuesOSName = OS.MacOS;
             }
             if (result.mobile === true)
                 parsedFromHighEntropyValuesDevice = Devices.Mobile;
@@ -625,6 +628,8 @@ function createSubscriptionManager(attach, detach) {
         },
         subscribe: function (listener, options) {
             if (options === void 0) { options = {}; }
+            if (typeof options.signal !== 'undefined' && options.signal.aborted)
+                return function () { };
             var entry = { fn: listener, once: false };
             if (typeof options.once !== 'undefined')
                 entry.once = options.once;
@@ -643,12 +648,8 @@ function createSubscriptionManager(attach, detach) {
                 EventListener.remove(entry.signal, { type: 'abort', callback: cleanup });
                 removeEntry(entry);
             };
-            if (typeof entry.signal !== 'undefined') {
-                if (entry.signal.aborted)
-                    removeEntry(entry);
-                else
-                    EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
-            }
+            if (typeof entry.signal !== 'undefined')
+                EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
             return function unsubscribe() {
                 removeEntry(entry);
             };
@@ -682,9 +683,9 @@ function getAppearanceFromEngine() {
         return exports.Appearances.Light;
 }
 function getAppearanceFromMediaQuery() {
-    if (exports.MEDIA_QUERY_LIST.media === 'not all')
+    if (exports.PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST.media === 'not all')
         return exports.Appearances.Unknown;
-    if (exports.MEDIA_QUERY_LIST.matches)
+    if (exports.PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST.matches)
         return exports.Appearances.Dark;
     return exports.Appearances.Light;
 }
@@ -712,13 +713,13 @@ function stopPolling() {
 }
 function attachOnChange() {
     appearanceRef = getAppearanceFromMediaQuery();
-    EventListener.add(exports.MEDIA_QUERY_LIST, { type: 'change', callback: onMediaChange });
+    EventListener.add(exports.PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST, { type: 'change', callback: onMediaChange });
     if (Platform.browser.name === Browsers.SamsungInternet)
         startPolling();
 }
 function detachOnChange() {
     appearanceRef = null;
-    EventListener.remove(exports.MEDIA_QUERY_LIST, { type: 'change', callback: onMediaChange });
+    EventListener.remove(exports.PREFERS_COLOR_SCHEME_MEDIA_QUERY_LIST, { type: 'change', callback: onMediaChange });
     if (Platform.browser.name === Browsers.SamsungInternet)
         stopPolling();
 }

@@ -3,8 +3,8 @@ export declare interface BadgeInstance {
     get supported(): boolean;
     set(contents: number): Promise<void>;
     clear(): Promise<void>;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
     };
 }

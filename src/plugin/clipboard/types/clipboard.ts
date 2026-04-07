@@ -3,6 +3,6 @@ export declare interface ClipboardInstance {
 
     paste(): Promise<string>;
 
-    Constants: {};
-    Errors: {};
+    readonly Constants: {};
+    readonly Errors: {};
 }

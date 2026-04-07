@@ -87,11 +87,11 @@ var Browsers;
     Browsers["IE"] = "IE";
     Browsers["SamsungInternet"] = "SamsungInternet";
 })(Browsers || (Browsers = {}));
-var USER_AGENT = (function () {
-    if (typeof globalThis.navigator.userAgent !== 'undefined')
-        return globalThis.navigator.userAgent;
-    return '';
-})();
+var USER_AGENT;
+if (typeof globalThis.navigator.userAgent !== 'undefined')
+    USER_AGENT = globalThis.navigator.userAgent;
+else
+    USER_AGENT = '';
 var HIGH_ENTROPY_BRAND_NAME_MAP = {
     'Google Chrome': 'Chrome',
     'Microsoft Edge': 'Edge',
@@ -368,9 +368,12 @@ var EventListener = {
 
 var currentUserAgent = USER_AGENT;
 var parsedCache = null;
-var parsedFromHighEntropyValuesOS = {};
-var parsedFromHighEntropyValuesBrowser = {};
-var parsedFromHighEntropyValuesEngine = {};
+var parsedFromHighEntropyValuesOSName = undefined;
+var parsedFromHighEntropyValuesOSVersion = undefined;
+var parsedFromHighEntropyValuesBrowserName = undefined;
+var parsedFromHighEntropyValuesBrowserVersion = undefined;
+var parsedFromHighEntropyValuesEngineName = undefined;
+var parsedFromHighEntropyValuesEngineVersion = undefined;
 var parsedFromHighEntropyValuesDevice = null;
 var parsedFromNavigatorGPU = {};
 var cachedLocale = null;
@@ -417,9 +420,12 @@ function normalizeLocale(locale) {
 function invalidateCache() {
     parsedCache = null;
     cachedLocale = null;
-    parsedFromHighEntropyValuesOS = {};
-    parsedFromHighEntropyValuesBrowser = {};
-    parsedFromHighEntropyValuesEngine = {};
+    parsedFromHighEntropyValuesOSName = undefined;
+    parsedFromHighEntropyValuesOSVersion = undefined;
+    parsedFromHighEntropyValuesBrowserName = undefined;
+    parsedFromHighEntropyValuesBrowserVersion = undefined;
+    parsedFromHighEntropyValuesEngineName = undefined;
+    parsedFromHighEntropyValuesEngineVersion = undefined;
     parsedFromHighEntropyValuesDevice = null;
     parsedFromNavigatorGPU = {};
 }
@@ -435,71 +441,74 @@ function getParsedCache() {
     return parsedCache;
 }
 function parseOS() {
-    var result = { name: OS.Unknown, version: '' };
+    var name = OS.Unknown;
+    var version = '';
     for (var i = 0; i < OS_RESOLVER_MAP.length; i++) {
         var map = OS_RESOLVER_MAP[i];
         var matched = currentUserAgent.match(map[0]);
         if (matched !== null) {
-            result.name = map[1];
-            result.version = resolveVersion(matched[1], map[2]);
+            name = map[1];
+            version = resolveVersion(matched[1], map[2]);
             break;
         }
     }
-    if (result.name === OS.iOS && compareVersion(result.version, '18.6') === 0) {
-        var version = /\) Version\/([\d.]+)/.exec(currentUserAgent);
-        if (version !== null) {
-            var major = parseInt(version[1].split('.')[0], 10);
+    if (name === OS.iOS && compareVersion(version, '18.6') === 0) {
+        var execs = /\) Version\/([\d.]+)/.exec(currentUserAgent);
+        if (execs !== null) {
+            var major = parseInt(execs[1].split('.')[0], 10);
             if (major >= 26)
-                result.version = version[1];
+                version = execs[1];
         }
     }
     if (currentUserAgent === USER_AGENT) {
-        if (typeof parsedFromHighEntropyValuesOS.name !== 'undefined')
-            result.name = parsedFromHighEntropyValuesOS.name;
-        if (typeof parsedFromHighEntropyValuesOS.version !== 'undefined')
-            result.version = parsedFromHighEntropyValuesOS.version;
-        if (result.name === OS.MacOS && typeof globalThis.navigator.standalone !== 'undefined' && globalThis.navigator.maxTouchPoints > 2)
-            result.name = OS.iOS;
+        if (typeof parsedFromHighEntropyValuesOSName !== 'undefined')
+            name = parsedFromHighEntropyValuesOSName;
+        if (typeof parsedFromHighEntropyValuesOSVersion !== 'undefined')
+            version = parsedFromHighEntropyValuesOSVersion;
+        if (name === OS.MacOS && typeof globalThis.navigator.standalone !== 'undefined' && globalThis.navigator.maxTouchPoints > 2)
+            name = OS.iOS;
     }
-    return result;
+    return { name: name, version: version };
 }
 function parseBrowser() {
-    var result = { name: Browsers.Unknown, version: '' };
+    var name = Browsers.Unknown;
+    var version = '';
     for (var i = 0; i < BROWSER_RESOLVER_MAP.length; i++) {
         var map = BROWSER_RESOLVER_MAP[i];
         var matched = currentUserAgent.match(map[0]);
         if (matched !== null) {
-            result.name = map[1];
-            result.version = resolveVersion(matched[1], map[2]);
+            name = map[1];
+            version = resolveVersion(matched[1], map[2]);
             break;
         }
     }
     if (currentUserAgent === USER_AGENT) {
-        if (typeof parsedFromHighEntropyValuesBrowser.name !== 'undefined')
-            result.name = parsedFromHighEntropyValuesBrowser.name;
-        if (typeof parsedFromHighEntropyValuesBrowser.version !== 'undefined')
-            result.version = parsedFromHighEntropyValuesBrowser.version;
+        if (typeof parsedFromHighEntropyValuesBrowserName !== 'undefined')
+            name = parsedFromHighEntropyValuesBrowserName;
+        if (typeof parsedFromHighEntropyValuesBrowserVersion !== 'undefined')
+            version = parsedFromHighEntropyValuesBrowserVersion;
     }
-    return result;
+    return { name: name, version: version };
 }
 function parseEngine() {
-    var result = { name: Engines.Unknown, version: '' };
+    var name = Engines.Unknown;
+    var version = '';
     for (var i = 0; i < ENGINE_RESOLVER_MAP.length; i++) {
         var map = ENGINE_RESOLVER_MAP[i];
         var matched = currentUserAgent.match(map[0]);
         if (matched !== null) {
-            result.name = map[1];
-            result.version = resolveVersion(matched[1], map[2]);
+            name = map[1];
+            version = resolveVersion(matched[1], map[2]);
             break;
         }
     }
     if (currentUserAgent === USER_AGENT) {
-        if (typeof parsedFromHighEntropyValuesEngine.name !== 'undefined')
-            result.name = parsedFromHighEntropyValuesEngine.name;
-        if (typeof parsedFromHighEntropyValuesEngine.version !== 'undefined')
-            result.version = parsedFromHighEntropyValuesEngine.version;
+        if (typeof parsedFromHighEntropyValuesEngineName !== 'undefined')
+            name = parsedFromHighEntropyValuesEngineName;
+        if (typeof parsedFromHighEntropyValuesEngineVersion !== 'undefined')
+            version = parsedFromHighEntropyValuesEngineVersion;
     }
-    return result;
+    return { name: name, version: version };
 }
 function getGPU() {
     return {
@@ -512,24 +521,22 @@ function getGPU() {
 function getLocale() {
     if (cachedLocale !== null)
         return cachedLocale;
-    var locale = {
-        language: null,
-        languages: [],
-        timezone: null,
-        offset: 0,
-        isRTL: false,
-    };
-    var isRTL = null;
-    function addLanguages(language) {
-        for (var i = 0; i < language.length; i++)
-            addLanguage(language[i]);
+    var language = null;
+    var languages = [];
+    var timezone = null;
+    var offset = 0;
+    var isRTL = false;
+    var isRTLResolved = null;
+    function addLanguages(langs) {
+        for (var i = 0; i < langs.length; i++)
+            addLanguage(langs[i]);
     }
-    function addLanguage(language) {
-        language = normalizeLocale(language);
-        if (typeof language === 'string' && locale.languages.indexOf(language) === -1) {
-            if (locale.language === null)
-                locale.language = language;
-            locale.languages.push(language);
+    function addLanguage(lang) {
+        lang = normalizeLocale(lang);
+        if (typeof lang === 'string' && languages.indexOf(lang) === -1) {
+            if (language === null)
+                language = lang;
+            languages.push(lang);
         }
     }
     if (typeof Intl !== 'undefined') {
@@ -539,7 +546,7 @@ function getLocale() {
         catch (_) {
         }
         try {
-            locale.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         }
         catch (_) {
         }
@@ -557,38 +564,38 @@ function getLocale() {
             addLanguage(globalThis.navigator.systemLanguage);
     }
     try {
-        locale.offset = new Date().getTimezoneOffset() * -1;
+        offset = new Date().getTimezoneOffset() * -1;
     }
     catch (_) {
     }
-    if (typeof locale.language === 'string') {
+    if (typeof language === 'string') {
         if (typeof Intl !== 'undefined' && typeof Intl.Locale !== 'undefined') {
             try {
-                var intlLocale = new Intl.Locale(locale.language);
+                var intlLocale = new Intl.Locale(language);
                 if (typeof intlLocale.getTextInfo === 'function')
-                    isRTL = intlLocale.getTextInfo().direction === 'rtl';
+                    isRTLResolved = intlLocale.getTextInfo().direction === 'rtl';
                 else if (typeof intlLocale.textInfo !== 'undefined')
-                    isRTL = intlLocale.textInfo.direction === 'rtl';
+                    isRTLResolved = intlLocale.textInfo.direction === 'rtl';
             }
             catch (_) {
             }
         }
-        if (typeof isRTL !== 'boolean') {
-            var matched = /^([A-Za-z]{1,8})(?:[-_][A-Za-z0-9]{1,8})*$/.exec(locale.language);
+        if (typeof isRTLResolved !== 'boolean') {
+            var matched = /^([A-Za-z]{1,8})(?:[-_][A-Za-z0-9]{1,8})*$/.exec(language);
             if (matched !== null) {
-                var language = matched[1].toLowerCase();
+                var lang = matched[1].toLowerCase();
                 for (var i = 0; i < RTL_LANGUAGES.length; i++) {
-                    if (RTL_LANGUAGES[i] === language) {
-                        isRTL = true;
+                    if (RTL_LANGUAGES[i] === lang) {
+                        isRTLResolved = true;
                         break;
                     }
                 }
             }
         }
     }
-    if (typeof isRTL === 'boolean')
-        locale.isRTL = isRTL;
-    cachedLocale = locale;
+    if (typeof isRTLResolved === 'boolean')
+        isRTL = isRTLResolved;
+    cachedLocale = { language: language, languages: languages, timezone: timezone, offset: offset, isRTL: isRTL };
     return cachedLocale;
 }
 function getDevice() {
@@ -639,38 +646,38 @@ function parseFromHighEntropyValues() {
                     if (prevBrandName === null || /Chrom/.test(prevBrandName) || !/Chrom/.test(brandName)) {
                         browserName = brandName;
                         if (browserName === 'Chrome' || browserName === 'Chrome WebView' || browserName === 'Chrome Headless')
-                            parsedFromHighEntropyValuesBrowser.name = Browsers.Chrome;
+                            parsedFromHighEntropyValuesBrowserName = Browsers.Chrome;
                         else if (browserName === 'Edge' || browserName === 'Edge WebView2')
-                            parsedFromHighEntropyValuesBrowser.name = Browsers.Edge;
+                            parsedFromHighEntropyValuesBrowserName = Browsers.Edge;
                         else if (browserName === 'Opera Mobi')
-                            parsedFromHighEntropyValuesBrowser.name = Browsers.Opera;
-                        parsedFromHighEntropyValuesBrowser.version = brandVersion;
+                            parsedFromHighEntropyValuesBrowserName = Browsers.Opera;
+                        parsedFromHighEntropyValuesBrowserVersion = brandVersion;
                     }
                     prevBrandName = brandName;
                 }
                 if (brandName === 'Chromium')
-                    parsedFromHighEntropyValuesEngine.version = brandVersion;
+                    parsedFromHighEntropyValuesEngineVersion = brandVersion;
             }
             if (typeof platformVersion === 'string') {
                 if (getParsedCache().os.name === OS.Windows) {
                     if (parseInt(platformVersion.split('.')[0], 10) >= 13)
-                        parsedFromHighEntropyValuesOS.version = '11';
+                        parsedFromHighEntropyValuesOSVersion = '11';
                     else
-                        parsedFromHighEntropyValuesOS.version = '10';
+                        parsedFromHighEntropyValuesOSVersion = '10';
                 }
                 else {
-                    parsedFromHighEntropyValuesOS.version = platformVersion;
+                    parsedFromHighEntropyValuesOSVersion = platformVersion;
                 }
             }
             if (typeof platform === 'string') {
                 if (/android/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = OS.Android;
+                    parsedFromHighEntropyValuesOSName = OS.Android;
                 else if (/ios|iphone|ipad/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = OS.iOS;
+                    parsedFromHighEntropyValuesOSName = OS.iOS;
                 else if (/windows|win32/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = OS.Windows;
+                    parsedFromHighEntropyValuesOSName = OS.Windows;
                 else if (/macos|macintel/i.test(platform))
-                    parsedFromHighEntropyValuesOS.name = OS.MacOS;
+                    parsedFromHighEntropyValuesOSName = OS.MacOS;
             }
             if (result.mobile === true)
                 parsedFromHighEntropyValuesDevice = Devices.Mobile;
@@ -792,6 +799,8 @@ function createSubscriptionManager(attach, detach) {
         },
         subscribe: function (listener, options) {
             if (options === void 0) { options = {}; }
+            if (typeof options.signal !== 'undefined' && options.signal.aborted)
+                return function () { };
             var entry = { fn: listener, once: false };
             if (typeof options.once !== 'undefined')
                 entry.once = options.once;
@@ -810,12 +819,8 @@ function createSubscriptionManager(attach, detach) {
                 EventListener.remove(entry.signal, { type: 'abort', callback: cleanup });
                 removeEntry(entry);
             };
-            if (typeof entry.signal !== 'undefined') {
-                if (entry.signal.aborted)
-                    removeEntry(entry);
-                else
-                    EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
-            }
+            if (typeof entry.signal !== 'undefined')
+                EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
             return function unsubscribe() {
                 removeEntry(entry);
             };

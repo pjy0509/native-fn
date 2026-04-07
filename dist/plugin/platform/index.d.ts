@@ -33,7 +33,7 @@ declare enum Browsers {
     IE = "IE",
     SamsungInternet = "SamsungInternet"
 }
-declare const USER_AGENT: string;
+declare let USER_AGENT: string;
 declare const HIGH_ENTROPY_BRAND_NAME_MAP: Record<string, string>;
 declare const RTL_LANGUAGES: string[];
 declare const OS_RESOLVER_MAP: [RegExp, OS, VersionResolver?][];
@@ -55,6 +55,22 @@ interface BatteryManager extends EventTarget {
     onchargingtimechange: ((this: BatteryManager, ev: Event) => any) | null;
     ondischargingtimechange: ((this: BatteryManager, ev: Event) => any) | null;
     onlevelchange: ((this: BatteryManager, ev: Event) => any) | null;
+}
+
+declare global {
+    interface DOMRectReadOnly {
+        readonly x: number;
+        readonly y: number;
+        readonly width: number;
+        readonly height: number;
+        readonly top: number;
+        readonly right: number;
+        readonly bottom: number;
+        readonly left: number;
+    }
+    interface VisualViewport {
+        readonly segments?: DOMRectReadOnly[];
+    }
 }
 
 declare global {
@@ -201,24 +217,24 @@ declare interface PlatformInstance {
     get isNode(): boolean;
     get isStandalone(): boolean;
     get isWebview(): boolean;
-    Constants: {
-        OS: typeof OS;
-        Engines: typeof Engines;
-        Browsers: typeof Browsers;
-        Devices: typeof Devices;
+    readonly Constants: {
+        readonly OS: typeof OS;
+        readonly Engines: typeof Engines;
+        readonly Browsers: typeof Browsers;
+        readonly Devices: typeof Devices;
     };
-    Errors: {};
+    readonly Errors: {};
 }
 declare interface NameVersionPair<T> {
-    name: T;
-    version: string;
+    readonly name: T;
+    readonly version: string;
 }
 declare interface Locale {
-    language: string | null;
-    languages: string[];
-    timezone: string | null;
-    offset: number;
-    isRTL: boolean;
+    readonly language: string | null;
+    readonly languages: readonly string[];
+    readonly timezone: string | null;
+    readonly offset: number;
+    readonly isRTL: boolean;
 }
 interface GPUAdapterInfo {
     readonly vendor?: string;

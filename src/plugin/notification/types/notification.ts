@@ -23,9 +23,9 @@ export declare interface NotificationInstance {
 
     get supported(): boolean;
 
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError,
-        PermissionNotGrantedError: typeof PermissionNotGrantedError,
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly PermissionNotGrantedError: typeof PermissionNotGrantedError;
     };
 }

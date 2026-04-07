@@ -12,7 +12,9 @@ declare enum PermissionType {
     Camera = "camera",
     ClipboardRead = "clipboard-read",
     Microphone = "microphone",
-    MIDI = "midi"
+    MIDI = "midi",
+    DeviceOrientation = "device-orientation",
+    DeviceMotion = "device-motion"
 }
 declare enum PermissionState {
     Grant = "grant",
@@ -22,15 +24,19 @@ declare enum PermissionState {
 }
 declare const GET_USER_MEDIA: ((constraints?: MediaStreamConstraints) => Promise<MediaStream>) | undefined;
 
+declare const NotSupportedError: ErrorConstructor;
+
 declare interface PermissionInstance {
     get supported(): boolean;
     request(type: PermissionType): Promise<PermissionState>;
     check(type: PermissionType): Promise<PermissionState>;
-    Constants: {
-        PermissionType: typeof PermissionType;
-        PermissionState: typeof PermissionState;
+    readonly Constants: {
+        readonly PermissionType: typeof PermissionType;
+        readonly PermissionState: typeof PermissionState;
     };
-    Errors: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+    };
 }
 
 declare const Permission: PermissionInstance;

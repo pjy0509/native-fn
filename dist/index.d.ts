@@ -7,10 +7,10 @@ declare enum Appearances {
 declare interface AppearanceInstance {
     get value(): Appearances;
     onChange(listener: (appearance: Appearances) => void, options?: AddEventListenerOptions): () => void;
-    Constants: {
-        Appearances: typeof Appearances;
+    readonly Constants: {
+        readonly Appearances: typeof Appearances;
     };
-    Errors: {};
+    readonly Errors: {};
 }
 
 declare const Appearance: AppearanceInstance;
@@ -21,9 +21,9 @@ declare interface BadgeInstance {
     get supported(): boolean;
     set(contents: number): Promise<void>;
     clear(): Promise<void>;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
     };
 }
 
@@ -49,9 +49,9 @@ declare interface BatteryInstance {
     get supported(): boolean;
     get value(): Promise<BatteryManager>;
     onChange(listener: (battery: BatteryManager) => void, options?: AddEventListenerOptions): () => void;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
     };
 }
 
@@ -60,16 +60,21 @@ declare const Battery: BatteryInstance;
 declare interface ClipboardInstance {
     copy(item: any): Promise<boolean>;
     paste(): Promise<string>;
-    Constants: {};
-    Errors: {};
+    readonly Constants: {};
+    readonly Errors: {};
 }
 
 declare const Clipboard: ClipboardInstance;
 
 declare enum Orientation {
-    Portrait = "portrait",
-    Landscape = "landscape",
-    Unknown = "unknown"
+    PortraitPrimary = "portrait-primary",
+    PortraitSecondary = "portrait-secondary",
+    LandscapePrimary = "landscape-primary",
+    LandscapeSecondary = "landscape-secondary"
+}
+declare namespace Orientation {
+    function isLandscape(orientation: Orientation): boolean;
+    function isPortrait(orientation: Orientation): boolean;
 }
 declare const ENV_PRESETS: {
     readonly 'safe-area-inset': {
@@ -108,40 +113,83 @@ declare const ENV_PRESETS: {
     };
 };
 
+declare const PermissionNotGrantedError: ErrorConstructor;
+
 type EnvironmentPresetKey = keyof typeof ENV_PRESETS;
-type EnvironmentPresetAttr<K extends EnvironmentPresetKey> = keyof typeof ENV_PRESETS[K];
+type EnvironmentPresetAttribute<K extends EnvironmentPresetKey> = keyof typeof ENV_PRESETS[K];
 type EnvironmentPresetValues<K extends EnvironmentPresetKey> = {
-    [P in EnvironmentPresetAttr<K>]: number;
+    [P in EnvironmentPresetAttribute<K>]: number;
 };
-declare interface DimensionInstance {
-    get value(): Dimensions;
-    environment: Environment;
-    onChange(listener: (dimension: Dimensions) => void, options?: AddEventListenerOptions): () => void;
-    Constants: {
-        Orientation: typeof Orientation;
-    };
-    Errors: {};
+declare interface Environment {
+    readonly safeAreaInset: EnvironmentObserver<'safe-area-inset'>;
+    readonly safeAreaMaxInset: EnvironmentObserver<'safe-area-max-inset'>;
+    readonly keyboardInset: EnvironmentObserver<'keyboard-inset'>;
+    readonly titlebarArea: EnvironmentObserver<'titlebar-area'>;
+    readonly viewportSegment: EnvironmentObserver<'viewport-segment'>;
 }
-declare interface Dimensions {
-    outerWidth: number;
-    outerHeight: number;
-    innerWidth: number;
-    innerHeight: number;
-    scale: number;
-    orientation: Orientation;
+declare interface SegmentsObserver {
+    get value(): EnvironmentPresetValues<'viewport-segment'>[];
+    onChange(listener: (value: EnvironmentPresetValues<'viewport-segment'>[]) => void, options?: AddEventListenerOptions): () => void;
+    useCssVariable(prefix: string): () => void;
 }
-declare interface EnvironmentPreset<K extends EnvironmentPresetKey> {
+declare type EnvironmentObserver<K extends EnvironmentPresetKey> = K extends 'viewport-segment' ? SegmentsObserver : {
     get value(): EnvironmentPresetValues<K>;
     onChange(listener: (value: EnvironmentPresetValues<K>) => void, options?: AddEventListenerOptions): () => void;
+    useCssVariable(prefix: string): () => void;
+};
+declare interface Dimensions {
+    readonly outerWidth: number;
+    readonly outerHeight: number;
+    readonly innerWidth: number;
+    readonly innerHeight: number;
+    readonly scale: number;
 }
-declare interface Environment {
-    safeAreaInset: EnvironmentPreset<'safe-area-inset'>;
-    safeAreaMaxInset: EnvironmentPreset<'safe-area-max-inset'>;
-    keyboardInset: EnvironmentPreset<'keyboard-inset'>;
-    titlebarArea: EnvironmentPreset<'titlebar-area'>;
-    viewportSegment: EnvironmentPreset<'viewport-segment'>;
+declare interface DeviceOrientationValue {
+    readonly alpha: number | null;
+    readonly beta: number | null;
+    readonly gamma: number | null;
+    readonly absolute: boolean;
+}
+declare interface DeviceOrientationInstance {
+    get supported(): boolean;
+    readonly value: Promise<DeviceOrientationValue>;
+    onChange(listener: (value: DeviceOrientationValue) => void, options?: AddEventListenerOptions): () => void;
+}
+declare interface ScreenOrientationInstance {
+    get supported(): boolean;
+    readonly value: Orientation;
+    onChange(listener: (value: Orientation) => void, options?: AddEventListenerOptions): () => void;
+}
+declare interface DimensionInstance {
+    get value(): Dimensions;
+    readonly environment: Environment;
+    readonly screenOrientation: ScreenOrientationInstance;
+    readonly deviceOrientation: DeviceOrientationInstance;
+    onChange(listener: (dimension: Dimensions) => void, options?: AddEventListenerOptions): () => void;
+    readonly Constants: {
+        readonly Orientation: typeof Orientation;
+    };
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly PermissionNotGrantedError: typeof PermissionNotGrantedError;
+    };
 }
 
+declare global {
+    interface DOMRectReadOnly {
+        readonly x: number;
+        readonly y: number;
+        readonly width: number;
+        readonly height: number;
+        readonly top: number;
+        readonly right: number;
+        readonly bottom: number;
+        readonly left: number;
+    }
+    interface VisualViewport {
+        readonly segments?: DOMRectReadOnly[];
+    }
+}
 declare const Dimension: DimensionInstance;
 
 declare const InvalidStateError: ErrorConstructor;
@@ -157,16 +205,16 @@ declare interface FullscreenInstance {
     onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
     onError(listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
     onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
-        InvalidStateError: typeof InvalidStateError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly InvalidStateError: typeof InvalidStateError;
     };
 }
 declare interface FullscreenEventPayload {
-    nativeEvent: Event;
-    element: Element;
-    isActive: boolean;
+    readonly nativeEvent: Event;
+    readonly element: Element;
+    readonly isActive: boolean;
 }
 
 declare global {
@@ -205,16 +253,14 @@ declare global {
 }
 declare const Fullscreen: FullscreenInstance;
 
-declare const PermissionNotGrantedError: ErrorConstructor;
-
 declare interface GeolocationInstance {
     get supported(): boolean;
     get value(): Promise<GeolocationCoordinates>;
     onChange(listener: (coordinates: GeolocationCoordinates) => void, options?: AddEventListenerOptions): () => void;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
-        PermissionNotGrantedError: typeof PermissionNotGrantedError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly PermissionNotGrantedError: typeof PermissionNotGrantedError;
     };
 }
 
@@ -239,10 +285,10 @@ interface NotificationOptions {
 declare interface NotificationInstance {
     send(options: NotificationOptions): Promise<Notification>;
     get supported(): boolean;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
-        PermissionNotGrantedError: typeof PermissionNotGrantedError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly PermissionNotGrantedError: typeof PermissionNotGrantedError;
     };
 }
 
@@ -337,24 +383,24 @@ declare interface PlatformInstance {
     get isNode(): boolean;
     get isStandalone(): boolean;
     get isWebview(): boolean;
-    Constants: {
-        OS: typeof OS;
-        Engines: typeof Engines;
-        Browsers: typeof Browsers;
-        Devices: typeof Devices;
+    readonly Constants: {
+        readonly OS: typeof OS;
+        readonly Engines: typeof Engines;
+        readonly Browsers: typeof Browsers;
+        readonly Devices: typeof Devices;
     };
-    Errors: {};
+    readonly Errors: {};
 }
 declare interface NameVersionPair<T> {
-    name: T;
-    version: string;
+    readonly name: T;
+    readonly version: string;
 }
 declare interface Locale {
-    language: string | null;
-    languages: string[];
-    timezone: string | null;
-    offset: number;
-    isRTL: boolean;
+    readonly language: string | null;
+    readonly languages: readonly string[];
+    readonly timezone: string | null;
+    readonly offset: number;
+    readonly isRTL: boolean;
 }
 interface GPUAdapterInfo {
     readonly vendor?: string;
@@ -507,8 +553,8 @@ interface DirectoryOptions {
     startIn?: ExplorerStartIn;
 }
 interface FileWithPath {
-    file: File;
-    relativePath: string;
+    readonly file: File;
+    readonly relativePath: string;
 }
 interface CameraOptions {
     type?: CameraType;
@@ -599,7 +645,7 @@ declare interface OpenInstance {
     contact(options?: ContactOptions): Promise<Contact[]>;
     share(options: ShareData): Promise<void>;
     calendar(options: CalendarOptions): void;
-    supported: {
+    readonly supported: {
         get intent(): boolean;
         get universal(): boolean;
         get setting(): boolean;
@@ -609,16 +655,16 @@ declare interface OpenInstance {
         get share(): boolean;
         get calendar(): boolean;
     };
-    Constants: {
-        AppOpenState: typeof AppOpenState;
-        SettingType: typeof SettingType;
-        CameraType: typeof CameraType;
-        CaptureType: typeof CaptureType;
+    readonly Constants: {
+        readonly AppOpenState: typeof AppOpenState;
+        readonly SettingType: typeof SettingType;
+        readonly CameraType: typeof CameraType;
+        readonly CaptureType: typeof CaptureType;
     };
-    Errors: {
-        URLOpenError: typeof URLOpenError;
-        NotSupportedError: typeof NotSupportedError;
-        UserCancelledError: typeof UserCancelledError;
+    readonly Errors: {
+        readonly URLOpenError: typeof URLOpenError;
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly UserCancelledError: typeof UserCancelledError;
     };
 }
 
@@ -679,8 +725,8 @@ declare const Open: OpenInstance;
 declare interface ThemeInstance {
     get value(): string | undefined;
     set value(color: string | undefined);
-    Constants: {};
-    Errors: {};
+    readonly Constants: {};
+    readonly Errors: {};
 }
 
 declare const Theme: ThemeInstance;
@@ -689,9 +735,9 @@ declare interface VibrationInstance {
     get supported(): boolean;
     run(pattern: number | number[]): boolean;
     stop(): boolean;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
     };
 }
 
@@ -711,7 +757,9 @@ declare enum PermissionType {
     Camera = "camera",
     ClipboardRead = "clipboard-read",
     Microphone = "microphone",
-    MIDI = "midi"
+    MIDI = "midi",
+    DeviceOrientation = "device-orientation",
+    DeviceMotion = "device-motion"
 }
 declare enum PermissionState {
     Grant = "grant",
@@ -724,11 +772,13 @@ declare interface PermissionInstance {
     get supported(): boolean;
     request(type: PermissionType): Promise<PermissionState>;
     check(type: PermissionType): Promise<PermissionState>;
-    Constants: {
-        PermissionType: typeof PermissionType;
-        PermissionState: typeof PermissionState;
+    readonly Constants: {
+        readonly PermissionType: typeof PermissionType;
+        readonly PermissionState: typeof PermissionState;
     };
-    Errors: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+    };
 }
 
 declare const Permission: PermissionInstance;
@@ -744,16 +794,16 @@ declare interface PipInstance {
     onChange(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
     onError(listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
     onError(target: HTMLVideoElement, listener: (payload: PipEventPayload) => void, options?: AddEventListenerOptions): () => void;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
-        InvalidStateError: typeof InvalidStateError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly InvalidStateError: typeof InvalidStateError;
     };
 }
 declare interface PipEventPayload {
-    nativeEvent: Event;
-    element: HTMLVideoElement;
-    isActive: boolean;
+    readonly nativeEvent: Event;
+    readonly element: HTMLVideoElement;
+    readonly isActive: boolean;
 }
 
 declare global {

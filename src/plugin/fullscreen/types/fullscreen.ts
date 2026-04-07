@@ -22,16 +22,16 @@ export declare interface FullscreenInstance {
 
     onChange(target: Element, listener: (payload: FullscreenEventPayload) => void, options?: AddEventListenerOptions): () => void;
 
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError,
-        InvalidStateError: typeof InvalidStateError,
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly InvalidStateError: typeof InvalidStateError;
     };
 }
 
 export declare interface FullscreenEventPayload {
-    nativeEvent: Event;
-    element: Element;
-    isActive: boolean;
+    readonly nativeEvent: Event;
+    readonly element: Element;
+    readonly isActive: boolean;
 }
 

@@ -14,6 +14,8 @@ export enum PermissionType {
     ClipboardRead = 'clipboard-read',
     Microphone = 'microphone',
     MIDI = 'midi',
+    DeviceOrientation = 'device-orientation',
+    DeviceMotion = 'device-motion',
 }
 
 export enum PermissionState {

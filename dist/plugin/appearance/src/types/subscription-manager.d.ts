@@ -1,4 +1,4 @@
-export declare interface SubscriptionManager<T, U> {
-    emit: (value: U) => void;
-    subscribe: (listener: (value: U) => void, options?: AddEventListenerOptions) => () => void;
+export declare interface SubscriptionManager<T> {
+    emit: (value: T) => void;
+    subscribe: (listener: (value: T) => void, options?: AddEventListenerOptions) => () => void;
 }

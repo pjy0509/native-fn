@@ -45,8 +45,8 @@ const PIP_BRIDGE_KEY: string | symbol = (function (): string | symbol {
     return '__nativeFnPipBridged__';
 }());
 
-const onChangeSubscriptionManager: SubscriptionManager<PipInstance, PipEventPayload> = createSubscriptionManager<PipInstance, PipEventPayload>(attachOnChange, detachOnChange);
-const onErrorSubscriptionManager: SubscriptionManager<PipInstance, PipEventPayload> = createSubscriptionManager<PipInstance, PipEventPayload>(attachOnError, detachOnError);
+const onChangeSubscriptionManager: SubscriptionManager<PipEventPayload> = createSubscriptionManager<PipEventPayload>(attachOnChange, detachOnChange);
+const onErrorSubscriptionManager: SubscriptionManager<PipEventPayload> = createSubscriptionManager<PipEventPayload>(attachOnError, detachOnError);
 
 const Pip: PipInstance = {
     get supported(): boolean {

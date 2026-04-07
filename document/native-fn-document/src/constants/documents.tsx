@@ -18,6 +18,7 @@ import {AppOpenState, CameraType, CaptureType, Contact, DirectoryExploreMode, Ex
 import {PermissionType} from "native-fn/permission";
 import ErrorMessage from "../components/form/ErrorMessage";
 import ColorPicker from "../components/form/ColorPicker";
+import EnvironmentVisualizer from "../components/EnvironmentVisualizer";
 
 interface DocumentReturns {
     type: string;
@@ -407,6 +408,8 @@ const TRY_IT_OUT = {
             }
 
             return <TryContainer>
+                <EnvironmentVisualizer/>
+
                 <Select
                     label="Preset"
                     value={preset}
@@ -421,6 +424,88 @@ const TRY_IT_OUT = {
                 />
 
                 <Button.Primary.Small onClick={run}>Run</Button.Primary.Small>
+
+                <TryResult result={result}/>
+            </TryContainer>;
+        },
+        screenOrientation: function TryItOut(): React.JSX.Element {
+            const [result, setResult] = React.useState<TryResultProps>(null);
+            const [subscribed, setSubscribed] = React.useState<boolean>(false);
+            const unsubRef = React.useRef<(() => void) | null>(null);
+
+            function subscribe(): void {
+                if (unsubRef.current) return;
+
+                unsubRef.current = Native.dimension.screenOrientation.onChange((orientation) => {
+                    setResult({ok: true, text: safeStr(orientation)});
+                });
+
+                setSubscribed(true);
+            }
+
+            function run(): void {
+                try {
+                    const value = Native.dimension.screenOrientation.value as any;
+
+                    setResult({ok: true, text: safeStr(value)});
+                } catch (e) {
+                    setResult({ok: false, text: safeStr(e)});
+                }
+            }
+
+            function unsubscribe(): void {
+                unsubRef.current?.();
+                unsubRef.current = null;
+                setSubscribed(false);
+            }
+
+            return <TryContainer>
+                <Button.Primary.Small onClick={run}>Run</Button.Primary.Small>
+
+                <Spacing height="0.5rem"/>
+
+                <SubscribeButtons subscribed={subscribed} onSubscribe={subscribe} onUnsubscribe={unsubscribe}/>
+
+                <TryResult result={result}/>
+            </TryContainer>;
+        },
+        deviceOrientation: function TryItOut(): React.JSX.Element {
+            const [result, setResult] = React.useState<TryResultProps>(null);
+            const [subscribed, setSubscribed] = React.useState<boolean>(false);
+            const unsubRef = React.useRef<(() => void) | null>(null);
+
+            function subscribe(): void {
+                if (unsubRef.current) return;
+
+                unsubRef.current = Native.dimension.deviceOrientation.onChange((orientation) => {
+                    setResult({ok: true, text: safeStr(orientation)});
+                });
+
+                setSubscribed(true);
+            }
+
+            async function run(): Promise<void> {
+                try {
+                    const value = await Native.dimension.deviceOrientation.value as any;
+
+                    setResult({ok: true, text: safeStr(value)});
+                } catch (e) {
+                    setResult({ok: false, text: safeStr(e)});
+                }
+            }
+
+            function unsubscribe(): void {
+                unsubRef.current?.();
+                unsubRef.current = null;
+                setSubscribed(false);
+            }
+
+            return <TryContainer>
+                <Button.Primary.Small onClick={run}>Run</Button.Primary.Small>
+
+                <Spacing height="0.5rem"/>
+
+                <SubscribeButtons subscribed={subscribed} onSubscribe={subscribe} onUnsubscribe={unsubscribe}/>
 
                 <TryResult result={result}/>
             </TryContainer>;
@@ -1215,6 +1300,8 @@ const TRY_IT_OUT = {
                         {value: PermissionType.Geolocation, label: PermissionType.Geolocation},
                         {value: PermissionType.Notification, label: PermissionType.Notification},
                         {value: PermissionType.MIDI, label: PermissionType.MIDI},
+                        {value: PermissionType.DeviceOrientation, label: PermissionType.DeviceOrientation},
+                        {value: PermissionType.DeviceMotion, label: PermissionType.DeviceMotion},
                     ]}
                 />
 
@@ -1249,6 +1336,8 @@ const TRY_IT_OUT = {
                         {value: PermissionType.Geolocation, label: PermissionType.Geolocation},
                         {value: PermissionType.Notification, label: PermissionType.Notification},
                         {value: PermissionType.MIDI, label: PermissionType.MIDI},
+                        {value: PermissionType.DeviceOrientation, label: PermissionType.DeviceOrientation},
+                        {value: PermissionType.DeviceMotion, label: PermissionType.DeviceMotion},
                     ]}
                 />
 
@@ -1577,7 +1666,7 @@ const TRY_IT_OUT = {
             }
 
             return <TryContainer>
-                <Button.Primary onClick={run} disabled={loading}>{loading ? "Waiting…" : "Run"}</Button.Primary>
+                <Button.Primary.Small onClick={run} disabled={loading}>{loading ? "Waiting…" : "Run"}</Button.Primary.Small>
 
                 <TryResult result={result}/>
             </TryContainer>;
@@ -1924,36 +2013,108 @@ console.log(text); // HTML string if available, plain text otherwise
     dimension: {
         value: {
             signature: `get value(): Dimensions`,
-            description: `Returns current viewport dimensions, device pixel ratio, and orientation.`,
+            description: `Returns current viewport dimensions, device pixel ratio.`,
             example: `
-const { innerWidth, innerHeight, outerWidth, outerHeight, scale, orientation } = Native.dimension.value;
+const { innerWidth, innerHeight, outerWidth, outerHeight, scale } = Native.dimension.value;
 
 console.log(innerWidth, innerHeight); // visible viewport size
-console.log(scale);                   // device pixel ratio e.g. 2, 3
-
-if (orientation === Orientation.Portrait) {
-    console.log('Portrait mode');
-}
-            `,
+console.log(scale);                   // device pixel ratio e.g. 2, 3`,
             returns: {
                 type: `Dimensions`,
                 description: `interface Dimensions {
-    outerWidth:  number;
-    outerHeight: number;
-    innerWidth:  number;
-    innerHeight: number;
-    scale:       number;
-    orientation: Orientation;
-}
-
-enum Orientation {
-    Portrait  = 'portrait',
-    Landscape = 'landscape',
-    Unknown   = 'unknown',
+    readonly outerWidth:  number;
+    readonly outerHeight: number;
+    readonly innerWidth:  number;
+    readonly innerHeight: number;
+    readonly scale:       number;
 }`,
             },
             throws: [],
             tryItOut: TRY_IT_OUT.dimension.value,
+        },
+        screenOrientation: {
+            signature: `screenOrientation: ScreenOrientationInstance`,
+            description: `Provides access to the current screen orientation and subscribes to its changes.`,
+            example: `
+// Check support
+if (Native.dimension.screenOrientation.supported) {
+    const orientation = Native.dimension.screenOrientation.value;
+    console.log(orientation); // e.g. Orientation.PortraitPrimary
+}
+
+// Subscribe to orientation changes
+const unsubscribe = Native.dimension.screenOrientation.onChange((orientation) => {
+    console.log(orientation); // Orientation.LandscapePrimary, etc.
+});
+
+unsubscribe();
+    `,
+            returns: {
+                type: `ScreenOrientationInstance`,
+                description: `interface ScreenOrientationInstance {
+    get supported(): boolean;
+
+    readonly value: Orientation;
+
+    onChange(listener: (value: Orientation) => void, options?: AddEventListenerOptions): () => void;
+}
+
+enum Orientation {
+    PortraitPrimary = 'portrait-primary',
+    PortraitSecondary = 'portrait-secondary',
+    LandscapePrimary = 'landscape-primary',
+    LandscapeSecondary = 'landscape-secondary',
+}`,
+            },
+            throws: [
+                `throw new NotSupportedError // Thrown when screen.orientation, window.orientation, and the orientation media query are all unsupported'`,
+            ],
+            tryItOut: TRY_IT_OUT.dimension.screenOrientation,
+        },
+        deviceOrientation: {
+            signature: `deviceOrientation: DeviceOrientationInstance`,
+            description: `Provides access to the physical device orientation (alpha, beta, gamma) via the DeviceOrientationEvent API. On iOS 13+, permission must be explicitly granted by the user.`,
+            example: `
+// Check support
+if (Native.dimension.deviceOrientation.supported) {
+
+    // Get current value (triggers permission prompt on iOS if needed)
+    const { alpha, beta, gamma, absolute } = await Native.dimension.deviceOrientation.value;
+    console.log(alpha, beta, gamma); // rotation angles in degrees
+
+    // Subscribe to real-time orientation changes
+    const unsubscribe = Native.dimension.deviceOrientation.onChange((value) => {
+        console.log(value.alpha);    // Z-axis rotation: 0 ~ 360
+        console.log(value.beta);     // X-axis tilt: -180 ~ 180
+        console.log(value.gamma);    // Y-axis tilt: -90 ~ 90
+        console.log(value.absolute); // true if relative to Earth's coordinate frame
+    });
+
+    unsubscribe();
+}
+    `,
+            returns: {
+                type: `DeviceOrientationInstance`,
+                description: `interface DeviceOrientationInstance {
+    get supported(): boolean;
+
+    readonly value: Promise<DeviceOrientationValue>;
+
+    onChange(listener: (value: DeviceOrientationValue) => void, options?: AddEventListenerOptions): () => void;
+}
+
+interface DeviceOrientationValue {
+    readonly alpha:    number | null; // Z-axis rotation (0–360)
+    readonly beta:     number | null; // X-axis tilt (-180–180)
+    readonly gamma:    number | null; // Y-axis tilt (-90–90)
+    readonly absolute: boolean;       // Earth-relative if true
+}`,
+            },
+            throws: [
+                `throw new NotSupportedError // Thrown when window.DeviceOrientationEvent is not available in the current environment.`,
+                `throw new PermissionNotGrantedError // Thrown on iOS 13+ when the user denies the deviceorientation permission request.`,
+            ],
+            tryItOut: TRY_IT_OUT.dimension.deviceOrientation,
         },
         environment: {
             signature: `environment: Environment`,
@@ -1972,20 +2133,44 @@ const unsubscribe = Native.dimension.environment.safeAreaInset.onChange((inset) 
     document.body.style.paddingBottom = inset.bottom + 'px';
 });
 unsubscribe();
-            `,
+
+// Sync safe area insets to CSS variables
+// Usage in CSS: var(--sai-top), var(--sai-bottom), var(--sai-left), var(--sai-right)
+const releaseSai = Native.dimension.environment.safeAreaInset.useCssVariable('sai');
+releaseSai(); // removes all --sai-* variables
+
+// Sync viewport segments to CSS variables (e.g. foldable devices)
+// Usage in CSS: var(--vs-0-width), var(--vs-0-height), var(--vs-1-top), ...
+const releaseVs = Native.dimension.environment.viewportSegment.useCssVariable('vs');
+releaseVs(); // removes all --vs-{index}-* variables
+`,
             returns: {
                 type: `Environment`,
                 description: `interface Environment {
-    safeAreaInset:    EnvironmentPreset<'safe-area-inset'>;
-    safeAreaMaxInset: EnvironmentPreset<'safe-area-max-inset'>;
-    keyboardInset:    EnvironmentPreset<'keyboard-inset'>;
-    titlebarArea:     EnvironmentPreset<'titlebar-area'>;
-    viewportSegment:  EnvironmentPreset<'viewport-segment'>;
+    safeAreaInset:    EnvironmentObserver<'safe-area-inset'>;
+    safeAreaMaxInset: EnvironmentObserver<'safe-area-max-inset'>;
+    keyboardInset:    EnvironmentObserver<'keyboard-inset'>;
+    titlebarArea:     EnvironmentObserver<'titlebar-area'>;
+    viewportSegment:  EnvironmentObserver<'viewport-segment'>;
 }
 
-interface EnvironmentPreset<K> {
-    get value(): EnvironmentPresetValues<K>;
-    onChange(listener: (value: EnvironmentPresetValues<K>) => void, options?: AddEventListenerOptions): () => void;
+type EnvironmentObserver<K extends EnvironmentPresetKey> =
+    K extends 'viewport-segment'
+        ? SegmentsObserver
+        : {
+            get value(): EnvironmentPresetValues<K>;
+
+            onChange(listener: (value: EnvironmentPresetValues<K>) => void, options?: AddEventListenerOptions): () => void;
+
+            useCssVariable(prefix: string): () => void;
+        };
+
+interface SegmentsObserver {
+    get value(): EnvironmentPresetValues<'viewport-segment'>[];
+
+    onChange(listener: (value: EnvironmentPresetValues<'viewport-segment'>[]) => void, options?: AddEventListenerOptions): () => void;
+
+    useCssVariable(prefix: string): () => void;
 }`,
             },
             throws: [],
@@ -1993,11 +2178,10 @@ interface EnvironmentPreset<K> {
         },
         onChange: {
             signature: `onChange(listener: (dimension: Dimensions) => void, options?: AddEventListenerOptions): () => void`,
-            description: `Subscribes to viewport dimension and orientation changes.`,
+            description: `Subscribes to viewport dimension change.`,
             example: `
 const unsubscribe = Native.dimension.onChange((dimension) => {
     console.log(dimension.innerWidth, dimension.innerHeight);
-    console.log(dimension.orientation); // 'portrait' | 'landscape'
 });
 
 unsubscribe();
@@ -2694,10 +2878,16 @@ flowchart TD
     E -->|Camera| H[getUserMedia video=true]
     E -->|ClipboardRead| I[clipboard.read]
     E -->|Microphone| J[getUserMedia audio=true]
-    E -->|MIDI| k[requestMIDIAccess]
-    E -->|unknown| L([Resolve Unsupported])
-    F & G & H & I & J --> M[check state again]
-    M --> N([Resolve PermissionState])
+    E -->|MIDI| K[requestMIDIAccess]
+    E -->|DeviceOrientation\\nDeviceMotion| L{Safari?\\nrequestPermission exists?}
+    E -->|unknown| M([Resolve Unsupported])
+    L -->|no — non-Safari| N([Resolve Grant])
+    L -->|yes| O{called within\\nuser gesture?}
+    O -->|no| P([Reject NotSupportedError])
+    O -->|yes| Q[requestPermission]
+    Q --> R([Resolve PermissionState])
+    F & G & H & I & J & K --> S[check state again]
+    S --> T([Resolve PermissionState])
             `,
             example: `
 const state = await Native.permission.request(PermissionType.Notification);
@@ -2716,12 +2906,14 @@ switch (state) {
             returns: {
                 type: `Promise<PermissionState>`,
                 description: `enum PermissionType {
-    Notification  = 'notifications',
-    Geolocation   = 'geolocation',
-    Camera        = 'camera',
-    ClipboardRead = 'clipboard-read',
-    Microphone    = 'microphone',
-    MIDI          = 'midi',
+    Notification      = 'notifications',
+    Geolocation       = 'geolocation',
+    Camera            = 'camera',
+    ClipboardRead     = 'clipboard-read',
+    Microphone        = 'microphone',
+    MIDI              = 'midi',
+    DeviceOrientation = 'device-orientation',
+    DeviceMotion      = 'device-motion',
 }
 
 enum PermissionState {
@@ -2953,8 +3145,8 @@ switch (name) {
             returns: {
                 type: `NameVersionPair<OS>`,
                 description: `interface NameVersionPair<T> {
-    name:    T;
-    version: string;
+    readonly name:    T;
+    readonly version: string;
 }
 
 enum OS {
@@ -3054,11 +3246,11 @@ console.log(isRTL);      // false
             returns: {
                 type: `Locale`,
                 description: `interface Locale {
-    language:  string | null;
-    languages: string[];
-    timezone:  string | null;
-    offset:    number;
-    isRTL:     boolean;
+    readonly language:  string | null;
+    readonly languages: string[];
+    readonly timezone:  string | null;
+    readonly offset:    number;
+    readonly isRTL:     boolean;
 }`,
             },
             throws: [],
@@ -3079,10 +3271,10 @@ console.log(device);       // 'Apple M2'
             returns: {
                 type: `GPU`,
                 description: `interface GPU {
-    vendor?:       string;
-    architecture?: string;
-    device?:       string;
-    description?:  string;
+    readonly vendor?:       string;
+    readonly architecture?: string;
+    readonly device?:       string;
+    readonly description?:  string;
 }`,
             },
             throws: [],
@@ -3230,6 +3422,15 @@ Native.vibration.stop();
 };
 
 const CHANGELOG = {
+    "1.3.2": [
+        "Add Native.dimension.screenOrientation — provides current screen orientation and subscribes to orientation changes",
+        "Add Native.dimension.deviceOrientation — provides physical device orientation (alpha, beta, gamma) with iOS 13+ permission support",
+        "Add DeviceOrientation and DeviceMotion permission types to Native.permission",
+    ],
+    "1.3.0": [
+        "Add useCssVariable to all environment observers — syncs environment values to CSS custom properties and returns a cleanup function",
+        "Fix viewport-segment stale CSS variable cleanup when segment count decreases",
+    ],
     "1.2.2": [
         "Add Native.pip.toggle — toggles PiP on the target element; switches to a new target without closing if another element is active",
         "Add Native.fullscreen.toggle — toggles fullscreen on the target element; switches to a new target without closing if another element is active",

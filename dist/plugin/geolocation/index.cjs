@@ -92,6 +92,8 @@ var PermissionType;
     PermissionType["ClipboardRead"] = "clipboard-read";
     PermissionType["Microphone"] = "microphone";
     PermissionType["MIDI"] = "midi";
+    PermissionType["DeviceOrientation"] = "device-orientation";
+    PermissionType["DeviceMotion"] = "device-motion";
 })(PermissionType || (PermissionType = {}));
 var PermissionState;
 (function (PermissionState) {
@@ -122,182 +124,6 @@ var GET_USER_MEDIA = (function () {
         };
     }
 })();
-
-var Permission = {
-    get supported() {
-        return supported$1();
-    },
-    request: request$1,
-    check: check,
-    Constants: {
-        PermissionType: PermissionType,
-        PermissionState: PermissionState,
-    },
-    Errors: {},
-};
-function supported$1() {
-    return typeof globalThis.navigator.permissions !== 'undefined';
-}
-function request$1(type) {
-    var instance = this;
-    return new Promise(function (resolve) {
-        function resolveAfterCheck() {
-            instance.check(type).then(resolve);
-        }
-        instance.check(type)
-            .then(function (state) {
-            if (state === PermissionState.Grant)
-                return resolve(state);
-            switch (type) {
-                case PermissionType.Notification:
-                    if (typeof globalThis.Notification === 'undefined')
-                        return resolve(PermissionState.Unsupported);
-                    globalThis.Notification.requestPermission().then(function (value) {
-                        switch (value) {
-                            case 'default':
-                                return resolve(PermissionState.Prompt);
-                            case 'granted':
-                                return resolve(PermissionState.Grant);
-                            case 'denied':
-                                return resolve(PermissionState.Denied);
-                            default:
-                                resolveAfterCheck();
-                        }
-                    });
-                    break;
-                case PermissionType.Geolocation:
-                    if (typeof globalThis.navigator.geolocation === 'undefined')
-                        return resolve(PermissionState.Unsupported);
-                    globalThis.navigator.geolocation.getCurrentPosition(resolveAfterCheck, resolveAfterCheck);
-                    break;
-                case PermissionType.Microphone:
-                case PermissionType.Camera:
-                    if (typeof GET_USER_MEDIA === 'undefined')
-                        return resolve(PermissionState.Unsupported);
-                    GET_USER_MEDIA({
-                        video: type === PermissionType.Camera,
-                        audio: type === PermissionType.Microphone,
-                    })
-                        .then(function (stream) {
-                        var tracks = stream.getTracks();
-                        for (var i = 0; i < tracks.length; i++)
-                            tracks[i].stop();
-                        resolveAfterCheck();
-                    })
-                        .catch(resolveAfterCheck);
-                    break;
-                case PermissionType.ClipboardRead:
-                    if (typeof globalThis.navigator.clipboard === 'undefined' || typeof globalThis.navigator.clipboard.read === 'undefined')
-                        return resolve(PermissionState.Unsupported);
-                    globalThis.navigator.clipboard.read()
-                        .then(resolveAfterCheck)
-                        .catch(resolveAfterCheck);
-                    break;
-                case PermissionType.MIDI:
-                    if (typeof globalThis.navigator.requestMIDIAccess === 'undefined')
-                        return resolve(PermissionState.Unsupported);
-                    globalThis.navigator.requestMIDIAccess()
-                        .then(resolveAfterCheck)
-                        .catch(resolveAfterCheck);
-                    break;
-                default:
-                    return resolve(PermissionState.Unsupported);
-            }
-        });
-    });
-}
-function check(type) {
-    return new Promise(function (resolve) {
-        if (typeof globalThis.navigator.permissions === 'undefined')
-            return resolve(PermissionState.Unsupported);
-        globalThis.navigator.permissions.query({ name: type })
-            .then(function (status) {
-            switch (status.state) {
-                case 'prompt':
-                    return resolve(PermissionState.Prompt);
-                case 'granted':
-                    return resolve(PermissionState.Grant);
-                case 'denied':
-                    return resolve(PermissionState.Denied);
-                default:
-                    return resolve(PermissionState.Unsupported);
-            }
-        });
-    });
-}
-
-var PermissionNotGrantedError = createCustomError('PermissionNotGrantedError');
-
-function keys(object) {
-    var keys = [];
-    for (var key in object)
-        if (object.hasOwnProperty(key))
-            keys.push(key);
-    return keys;
-}
-
-function request(url, options) {
-    return new Promise(function (resolve) {
-        var method = 'GET';
-        var headers = {};
-        var body = undefined;
-        if (typeof globalThis.fetch !== 'undefined') {
-            fetch(url, {
-                method: method,
-                headers: headers,
-                body: body
-            })
-                .then(function (response) {
-                if (!response.ok) {
-                    resolve(undefined);
-                    return Promise.resolve();
-                }
-                return response
-                    .json()
-                    .then(function (data) {
-                    resolve(data);
-                })
-                    .catch(function () {
-                    resolve(undefined);
-                });
-            })
-                .catch(function () {
-                resolve(undefined);
-            });
-            return;
-        }
-        if (typeof XMLHttpRequest !== "undefined") {
-            var xhr_1 = new XMLHttpRequest();
-            xhr_1.open(method, url, true);
-            var headerKeys = keys(headers);
-            for (var i = 0; i < headerKeys.length; i++) {
-                var headerKey = headerKeys[i];
-                xhr_1.setRequestHeader(headerKey, headers[headerKey]);
-            }
-            xhr_1.onreadystatechange = function () {
-                if (xhr_1.readyState !== 4)
-                    return;
-                if (xhr_1.status >= 200 && xhr_1.status < 300) {
-                    try {
-                        resolve(JSON.parse(xhr_1.responseText));
-                    }
-                    catch (_) {
-                        resolve(undefined);
-                    }
-                }
-                else {
-                    resolve(undefined);
-                }
-            };
-            xhr_1.onerror = function () {
-                resolve(undefined);
-            };
-            xhr_1.send(body);
-            return;
-        }
-        resolve(undefined);
-    });
-}
 
 var IE_WRAPPER_STORE = [];
 var MEDIA_QUERY_LIST_WRAPPER_STORE = [];
@@ -505,6 +331,249 @@ var EventListener = {
     },
 };
 
+var Permission = {
+    get supported() {
+        return supported$1();
+    },
+    request: request$1,
+    check: check,
+    Constants: {
+        PermissionType: PermissionType,
+        PermissionState: PermissionState,
+    },
+    Errors: {
+        NotSupportedError: NotSupportedError,
+    },
+};
+function toPermissionState(permission) {
+    switch (permission) {
+        case 'granted':
+            return PermissionState.Grant;
+        case 'denied':
+            return PermissionState.Denied;
+        case 'prompt':
+        case 'default':
+            return PermissionState.Prompt;
+        default:
+            return PermissionState.Unsupported;
+    }
+}
+function toSafariSensorEventMap(type) {
+    switch (type) {
+        case PermissionType.DeviceOrientation:
+            return {
+                event: globalThis.DeviceOrientationEvent,
+                type: 'deviceorientation',
+            };
+        case PermissionType.DeviceMotion:
+            return {
+                event: globalThis.DeviceMotionEvent,
+                type: 'devicemotion',
+            };
+        default:
+            return undefined;
+    }
+}
+function supported$1() {
+    return typeof globalThis.navigator.permissions !== 'undefined';
+}
+function request$1(type) {
+    var instance = this;
+    return new Promise(function (resolve, reject) {
+        function resolveAfterCheck() {
+            instance.check(type).then(resolve);
+        }
+        instance.check(type)
+            .then(function (state) {
+            if (state === PermissionState.Grant)
+                return resolve(state);
+            switch (type) {
+                case PermissionType.Notification:
+                    if (typeof globalThis.Notification === 'undefined')
+                        return resolve(PermissionState.Unsupported);
+                    globalThis.Notification.requestPermission().then(function (permission) {
+                        resolve(toPermissionState(permission));
+                    });
+                    break;
+                case PermissionType.Geolocation:
+                    if (typeof globalThis.navigator.geolocation === 'undefined')
+                        return resolve(PermissionState.Unsupported);
+                    globalThis.navigator.geolocation.getCurrentPosition(resolveAfterCheck, resolveAfterCheck);
+                    break;
+                case PermissionType.Microphone:
+                case PermissionType.Camera:
+                    if (typeof GET_USER_MEDIA === 'undefined')
+                        return resolve(PermissionState.Unsupported);
+                    GET_USER_MEDIA({
+                        video: type === PermissionType.Camera,
+                        audio: type === PermissionType.Microphone,
+                    })
+                        .then(function (stream) {
+                        var tracks = stream.getTracks();
+                        for (var i = 0; i < tracks.length; i++)
+                            tracks[i].stop();
+                        resolveAfterCheck();
+                    })
+                        .catch(resolveAfterCheck);
+                    break;
+                case PermissionType.ClipboardRead:
+                    if (typeof globalThis.navigator.clipboard === 'undefined' || typeof globalThis.navigator.clipboard.read === 'undefined')
+                        return resolve(PermissionState.Unsupported);
+                    globalThis.navigator.clipboard.read()
+                        .then(resolveAfterCheck)
+                        .catch(resolveAfterCheck);
+                    break;
+                case PermissionType.MIDI:
+                    if (typeof globalThis.navigator.requestMIDIAccess === 'undefined')
+                        return resolve(PermissionState.Unsupported);
+                    globalThis.navigator.requestMIDIAccess()
+                        .then(resolveAfterCheck)
+                        .catch(resolveAfterCheck);
+                    break;
+                case PermissionType.DeviceOrientation:
+                case PermissionType.DeviceMotion:
+                    var sensorEventMap = toSafariSensorEventMap(type);
+                    if (typeof sensorEventMap === 'undefined' || typeof sensorEventMap.event === 'undefined')
+                        return resolve(PermissionState.Unsupported);
+                    if (typeof sensorEventMap.event.requestPermission !== 'function')
+                        return resolve(PermissionState.Grant);
+                    try {
+                        sensorEventMap.event.requestPermission()
+                            .then(function (permission) {
+                            resolve(toPermissionState(permission));
+                        });
+                    }
+                    catch (_) {
+                        return reject(new NotSupportedError('\'DeviceOrientationEvent.requestPermission()\' must be called within a user gesture context.'));
+                    }
+                    break;
+                default:
+                    return resolve(PermissionState.Unsupported);
+            }
+        });
+    });
+}
+function check(type) {
+    if (type === PermissionType.DeviceOrientation || type === PermissionType.DeviceMotion) {
+        return new Promise(function (resolve) {
+            var sensorEventMap = toSafariSensorEventMap(type);
+            if (typeof sensorEventMap === 'undefined' || typeof sensorEventMap.event === 'undefined')
+                return resolve(PermissionState.Unsupported);
+            if (typeof sensorEventMap.event.requestPermission !== 'function')
+                return resolve(PermissionState.Grant);
+            var granted = false;
+            EventListener.add(globalThis, {
+                type: sensorEventMap.type,
+                callback: function () {
+                    granted = true;
+                },
+                options: { once: true }
+            });
+            setTimeout(function () {
+                if (granted)
+                    return resolve(PermissionState.Grant);
+                sensorEventMap.event.requestPermission()
+                    .then(function (permission) {
+                    resolve(toPermissionState(permission));
+                })
+                    .catch(function () {
+                    resolve(PermissionState.Prompt);
+                });
+            }, 50);
+        });
+    }
+    return new Promise(function (resolve) {
+        if (typeof globalThis.navigator.permissions === 'undefined')
+            return resolve(PermissionState.Unsupported);
+        globalThis.navigator.permissions.query({ name: type })
+            .then(function (status) {
+            switch (status.state) {
+                case 'prompt':
+                    return resolve(PermissionState.Prompt);
+                case 'granted':
+                    return resolve(PermissionState.Grant);
+                case 'denied':
+                    return resolve(PermissionState.Denied);
+                default:
+                    return resolve(PermissionState.Unsupported);
+            }
+        });
+    });
+}
+
+var PermissionNotGrantedError = createCustomError('PermissionNotGrantedError');
+
+function keys(object) {
+    var keys = [];
+    for (var key in object)
+        if (object.hasOwnProperty(key))
+            keys.push(key);
+    return keys;
+}
+
+function request(url, options) {
+    return new Promise(function (resolve) {
+        var method = 'GET';
+        var headers = {};
+        var body = undefined;
+        if (typeof globalThis.fetch !== 'undefined') {
+            fetch(url, {
+                method: method,
+                headers: headers,
+                body: body
+            })
+                .then(function (response) {
+                if (!response.ok) {
+                    resolve(undefined);
+                    return Promise.resolve();
+                }
+                return response
+                    .json()
+                    .then(function (data) {
+                    resolve(data);
+                })
+                    .catch(function () {
+                    resolve(undefined);
+                });
+            })
+                .catch(function () {
+                resolve(undefined);
+            });
+            return;
+        }
+        if (typeof XMLHttpRequest !== "undefined") {
+            var xhr_1 = new XMLHttpRequest();
+            xhr_1.open(method, url, true);
+            var headerKeys = keys(headers);
+            for (var i = 0; i < headerKeys.length; i++) {
+                var headerKey = headerKeys[i];
+                xhr_1.setRequestHeader(headerKey, headers[headerKey]);
+            }
+            xhr_1.onreadystatechange = function () {
+                if (xhr_1.readyState !== 4)
+                    return;
+                if (xhr_1.status >= 200 && xhr_1.status < 300) {
+                    try {
+                        resolve(JSON.parse(xhr_1.responseText));
+                    }
+                    catch (_) {
+                        resolve(undefined);
+                    }
+                }
+                else {
+                    resolve(undefined);
+                }
+            };
+            xhr_1.onerror = function () {
+                resolve(undefined);
+            };
+            xhr_1.send(body);
+            return;
+        }
+        resolve(undefined);
+    });
+}
+
 function createSubscriptionManager(attach, detach) {
     var entries = [];
     function removeEntry(entry) {
@@ -532,6 +601,8 @@ function createSubscriptionManager(attach, detach) {
         },
         subscribe: function (listener, options) {
             if (options === void 0) { options = {}; }
+            if (typeof options.signal !== 'undefined' && options.signal.aborted)
+                return function () { };
             var entry = { fn: listener, once: false };
             if (typeof options.once !== 'undefined')
                 entry.once = options.once;
@@ -550,12 +621,8 @@ function createSubscriptionManager(attach, detach) {
                 EventListener.remove(entry.signal, { type: 'abort', callback: cleanup });
                 removeEntry(entry);
             };
-            if (typeof entry.signal !== 'undefined') {
-                if (entry.signal.aborted)
-                    removeEntry(entry);
-                else
-                    EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
-            }
+            if (typeof entry.signal !== 'undefined')
+                EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
             return function unsubscribe() {
                 removeEntry(entry);
             };

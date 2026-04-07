@@ -103,8 +103,8 @@ export interface DirectoryOptions {
 }
 
 export interface FileWithPath {
-    file: File;
-    relativePath: string;
+    readonly file: File;
+    readonly relativePath: string;
 }
 
 export interface CameraOptions {
@@ -230,7 +230,7 @@ export declare interface OpenInstance {
 
     calendar(options: CalendarOptions): void;
 
-    supported: {
+    readonly supported: {
         get intent(): boolean;
 
         get universal(): boolean;
@@ -247,15 +247,15 @@ export declare interface OpenInstance {
 
         get calendar(): boolean;
     };
-    Constants: {
-        AppOpenState: typeof AppOpenState,
-        SettingType: typeof SettingType,
-        CameraType: typeof CameraType,
-        CaptureType: typeof CaptureType,
+    readonly Constants: {
+        readonly AppOpenState: typeof AppOpenState;
+        readonly SettingType: typeof SettingType;
+        readonly CameraType: typeof CameraType;
+        readonly CaptureType: typeof CaptureType;
     };
-    Errors: {
-        URLOpenError: typeof URLOpenError,
-        NotSupportedError: typeof NotSupportedError,
-        UserCancelledError: typeof UserCancelledError,
+    readonly Errors: {
+        readonly URLOpenError: typeof URLOpenError;
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly UserCancelledError: typeof UserCancelledError;
     };
 }

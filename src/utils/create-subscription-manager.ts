@@ -2,10 +2,10 @@ import {ListenerEntry} from "../types/listener-entry";
 import EventListener from "./event-listener";
 import {SubscriptionManager} from "../types/subscription-manager";
 
-export default function createSubscriptionManager<T, U>(attach: () => void, detach: () => void): SubscriptionManager<T, U> {
-    const entries: ListenerEntry<U>[] = [];
+export default function createSubscriptionManager<T>(attach: () => void, detach: () => void): SubscriptionManager<T> {
+    const entries: ListenerEntry<T>[] = [];
 
-    function removeEntry(entry: ListenerEntry<U>): void {
+    function removeEntry(entry: ListenerEntry<T>): void {
         const index: number = indexOfEntry(entry);
 
         if (index !== -1) {
@@ -15,15 +15,15 @@ export default function createSubscriptionManager<T, U>(attach: () => void, deta
         }
     }
 
-    function indexOfEntry(entry: ListenerEntry<U>): number {
+    function indexOfEntry(entry: ListenerEntry<T>): number {
         for (let i: number = 0; i < entries.length; i++) if (entries[i].fn === entry.fn) return i;
 
         return -1;
     }
 
     return {
-        emit: function (value: U): void {
-            const snapshot: ListenerEntry<U>[] = entries.slice();
+        emit: function (value: T): void {
+            const snapshot: ListenerEntry<T>[] = entries.slice();
 
             for (let i: number = 0; i < snapshot.length; i++) {
                 snapshot[i].fn(value);
@@ -31,8 +31,10 @@ export default function createSubscriptionManager<T, U>(attach: () => void, deta
                 if (snapshot[i].once) removeEntry(snapshot[i]);
             }
         },
-        subscribe: function (this: T, listener: (value: U) => void, options: AddEventListenerOptions = {}): () => void {
-            const entry: ListenerEntry<U> = {fn: listener, once: false};
+        subscribe: function (listener: (value: T) => void, options: AddEventListenerOptions = {}): () => void {
+            if (typeof options.signal !== 'undefined' && options.signal.aborted) return function () {};
+
+            const entry: ListenerEntry<T> = {fn: listener, once: false};
 
             if (typeof options.once !== 'undefined') entry.once = options.once;
             if (typeof options.signal !== 'undefined') entry.signal = options.signal;
@@ -50,16 +52,13 @@ export default function createSubscriptionManager<T, U>(attach: () => void, deta
             const cleanup: () => void = function () {
                 EventListener.remove(entry.signal, {type: 'abort', callback: cleanup});
                 removeEntry(entry);
-            }
+            };
 
-            if (typeof entry.signal !== 'undefined') {
-                if (entry.signal.aborted) removeEntry(entry);
-                else EventListener.add(entry.signal, {type: 'abort', callback: cleanup});
-            }
+            if (typeof entry.signal !== 'undefined') EventListener.add(entry.signal, {type: 'abort', callback: cleanup});
 
             return function unsubscribe(): void {
                 removeEntry(entry);
             };
         }
-    }
+    };
 }

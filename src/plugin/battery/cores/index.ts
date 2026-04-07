@@ -4,7 +4,7 @@ import {SubscriptionManager} from "../../../types/subscription-manager";
 import createSubscriptionManager from "../../../utils/create-subscription-manager";
 import EventListener from "../../../utils/event-listener";
 
-const onChangeSubscriptionManager: SubscriptionManager<BatteryInstance, BatteryManager> = createSubscriptionManager<BatteryInstance, BatteryManager>(attachOnChange, detachOnChange);
+const onChangeSubscriptionManager: SubscriptionManager<BatteryManager> = createSubscriptionManager<BatteryManager>(attachOnChange, detachOnChange);
 let batteryRef: BatteryManager | null = null;
 
 const Battery: BatteryInstance = {

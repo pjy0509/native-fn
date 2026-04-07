@@ -7,8 +7,8 @@ export declare interface BadgeInstance {
 
     clear(): Promise<void>;
 
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError,
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
     };
 }

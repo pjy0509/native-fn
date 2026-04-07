@@ -1,4 +1,5 @@
 import {PermissionState, PermissionType} from "../constants";
+import {NotSupportedError} from "../../../errors/not-supported-error";
 
 export declare interface PermissionInstance {
     get supported(): boolean;
@@ -7,9 +8,11 @@ export declare interface PermissionInstance {
 
     check(type: PermissionType): Promise<PermissionState>;
 
-    Constants: {
-        PermissionType: typeof PermissionType,
-        PermissionState: typeof PermissionState,
+    readonly Constants: {
+        readonly PermissionType: typeof PermissionType;
+        readonly PermissionState: typeof PermissionState;
     };
-    Errors: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+    };
 }

@@ -21,9 +21,20 @@ var FALLBACK_MEDIA_QUERY_LIST = {
 
 exports.Orientation = void 0;
 (function (Orientation) {
-    Orientation["Portrait"] = "portrait";
-    Orientation["Landscape"] = "landscape";
-    Orientation["Unknown"] = "unknown";
+    Orientation["PortraitPrimary"] = "portrait-primary";
+    Orientation["PortraitSecondary"] = "portrait-secondary";
+    Orientation["LandscapePrimary"] = "landscape-primary";
+    Orientation["LandscapeSecondary"] = "landscape-secondary";
+})(exports.Orientation || (exports.Orientation = {}));
+(function (Orientation) {
+    function isLandscape(orientation) {
+        return orientation === Orientation.LandscapePrimary || orientation === Orientation.LandscapeSecondary;
+    }
+    Orientation.isLandscape = isLandscape;
+    function isPortrait(orientation) {
+        return orientation === Orientation.PortraitPrimary || orientation === Orientation.PortraitSecondary;
+    }
+    Orientation.isPortrait = isPortrait;
 })(exports.Orientation || (exports.Orientation = {}));
 var ENV_PRESETS = {
     'safe-area-inset': {
@@ -61,19 +72,16 @@ var ENV_PRESETS = {
         left: 'viewport-segment-left',
     },
 };
-var FALLBACK_DIMENSION = {
-    innerWidth: -1,
-    innerHeight: -1,
-    outerWidth: -1,
-    outerHeight: -1,
-    scale: 1,
-    orientation: exports.Orientation.Unknown,
-};
-exports.MEDIA_QUERY_LIST = void 0;
+exports.ORIENTATION_MEDIA_QUERY_LIST = void 0;
 if (typeof globalThis.matchMedia !== 'undefined')
-    exports.MEDIA_QUERY_LIST = globalThis.matchMedia('(orientation: portrait)');
+    exports.ORIENTATION_MEDIA_QUERY_LIST = globalThis.matchMedia('(orientation: portrait)');
 else
-    exports.MEDIA_QUERY_LIST = FALLBACK_MEDIA_QUERY_LIST;
+    exports.ORIENTATION_MEDIA_QUERY_LIST = FALLBACK_MEDIA_QUERY_LIST;
+exports.DEVICE_POSTURE_MEDIA_QUERY_LIST = void 0;
+if (typeof globalThis.matchMedia !== 'undefined')
+    exports.DEVICE_POSTURE_MEDIA_QUERY_LIST = globalThis.matchMedia('(device-posture: folded)');
+else
+    exports.DEVICE_POSTURE_MEDIA_QUERY_LIST = FALLBACK_MEDIA_QUERY_LIST;
 
 var IE_WRAPPER_STORE = [];
 var MEDIA_QUERY_LIST_WRAPPER_STORE = [];
@@ -308,6 +316,8 @@ function createSubscriptionManager(attach, detach) {
         },
         subscribe: function (listener, options) {
             if (options === void 0) { options = {}; }
+            if (typeof options.signal !== 'undefined' && options.signal.aborted)
+                return function () { };
             var entry = { fn: listener, once: false };
             if (typeof options.once !== 'undefined')
                 entry.once = options.once;
@@ -326,12 +336,8 @@ function createSubscriptionManager(attach, detach) {
                 EventListener.remove(entry.signal, { type: 'abort', callback: cleanup });
                 removeEntry(entry);
             };
-            if (typeof entry.signal !== 'undefined') {
-                if (entry.signal.aborted)
-                    removeEntry(entry);
-                else
-                    EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
-            }
+            if (typeof entry.signal !== 'undefined')
+                EventListener.add(entry.signal, { type: 'abort', callback: cleanup });
             return function unsubscribe() {
                 removeEntry(entry);
             };
@@ -368,7 +374,354 @@ function setStyle(element, styles) {
     }
 }
 
+function createHiddenElement(tagName, focusable) {
+    if (focusable === void 0) { focusable = true; }
+    var element = globalThis.document.createElement(tagName);
+    if (typeof element.width !== 'undefined')
+        element.width = '0';
+    if (typeof element.height !== 'undefined')
+        element.height = '0';
+    if (typeof element.border !== 'undefined')
+        element.border = '0';
+    if (typeof element.frameBorder !== 'undefined')
+        element.frameBorder = '0';
+    if (typeof element.scrolling !== 'undefined')
+        element.scrolling = 'no';
+    if (typeof element.cellPadding !== 'undefined')
+        element.cellPadding = '0';
+    if (typeof element.cellSpacing !== 'undefined')
+        element.cellSpacing = '0';
+    if (typeof element.frame !== 'undefined')
+        element.frame = 'void';
+    if (typeof element.rules !== 'undefined')
+        element.rules = 'none';
+    if (typeof element.noWrap !== 'undefined')
+        element.noWrap = true;
+    element.tabIndex = -1;
+    element.setAttribute('role', 'presentation');
+    if (focusable) {
+        setStyle(element, {
+            width: '1px',
+            height: '1px',
+        });
+    }
+    else {
+        element.setAttribute('aria-hidden', 'true');
+        setStyle(element, {
+            width: '0',
+            height: '0',
+            zIndex: '-9999',
+            display: 'none',
+            visibility: 'hidden',
+            pointerEvents: 'none',
+        });
+    }
+    setStyle(element, {
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        padding: '0',
+        margin: '0',
+        border: 'none',
+        outline: 'hidden',
+        clip: 'rect(1px, 1px, 1px, 1px)',
+        clipPath: 'inset(50%)',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+    });
+    return element;
+}
+
+var MAX_SEGMENTS_PER_AXIS = 4;
 function noop() {
+}
+function getSupportedEnvironment() {
+    if (typeof globalThis.CSS !== 'undefined' && typeof globalThis.CSS.supports === 'function') {
+        if (globalThis.CSS.supports('x: env(x)'))
+            return 'env';
+        if (globalThis.CSS.supports('x: constant(x)'))
+            return 'constant';
+    }
+    return undefined;
+}
+function getSegmentGrid() {
+    if (typeof globalThis.matchMedia !== 'function')
+        return { rows: 1, cols: 1 };
+    var cols = 1;
+    var rows = 1;
+    for (var i = MAX_SEGMENTS_PER_AXIS; i >= 2; i--) {
+        if (globalThis.matchMedia('(horizontal-viewport-segments: ' + i + ')').matches) {
+            cols = i;
+            break;
+        }
+    }
+    for (var i = MAX_SEGMENTS_PER_AXIS; i >= 2; i--) {
+        if (globalThis.matchMedia('(vertical-viewport-segments: ' + i + ')').matches) {
+            rows = i;
+            break;
+        }
+    }
+    return { rows: rows, cols: cols };
+}
+function buildSegmentMediaQueryLists() {
+    if (typeof globalThis.matchMedia !== 'function')
+        return [];
+    var mediaQueryLists = [];
+    for (var i = 2; i <= MAX_SEGMENTS_PER_AXIS; i++) {
+        mediaQueryLists.push(globalThis.matchMedia('(horizontal-viewport-segments: ' + i + ')'));
+        mediaQueryLists.push(globalThis.matchMedia('(vertical-viewport-segments: ' + i + ')'));
+    }
+    return mediaQueryLists;
+}
+function createViewportSegmentObserver() {
+    var viewport = globalThis.viewport;
+    var visualViewport = globalThis.visualViewport;
+    var devicePosture = globalThis.navigator.devicePosture;
+    var hasSegmentsAPI = typeof viewport !== 'undefined';
+    var hasLegacySegmentsAPI = !hasSegmentsAPI && typeof visualViewport !== 'undefined' && visualViewport !== null && typeof visualViewport.segments !== 'undefined';
+    var hasDevicePosture = typeof devicePosture !== 'undefined';
+    var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
+    var support = getSupportedEnvironment();
+    var cachedDiv = null;
+    var segmentMediaQueryLists = [];
+    var previousSegments = null;
+    function attachCSSFallbackListeners() {
+        segmentMediaQueryLists = buildSegmentMediaQueryLists();
+        for (var i = 0; i < segmentMediaQueryLists.length; i++)
+            EventListener.add(segmentMediaQueryLists[i], { type: 'change', callback: onSegmentChange });
+        if (exports.DEVICE_POSTURE_MEDIA_QUERY_LIST.media !== 'not all')
+            EventListener.add(exports.DEVICE_POSTURE_MEDIA_QUERY_LIST, { type: 'change', callback: onSegmentChange });
+    }
+    function detachCSSFallbackListeners() {
+        for (var i = 0; i < segmentMediaQueryLists.length; i++)
+            EventListener.remove(segmentMediaQueryLists[i], { type: 'change', callback: onSegmentChange });
+        segmentMediaQueryLists = [];
+        if (exports.DEVICE_POSTURE_MEDIA_QUERY_LIST.media !== 'not all')
+            EventListener.remove(exports.DEVICE_POSTURE_MEDIA_QUERY_LIST, { type: 'change', callback: onSegmentChange });
+    }
+    function attachDevicePostureChangeListener() {
+        if (hasDevicePosture)
+            EventListener.add(devicePosture, { type: 'change', callback: onSegmentChange });
+        attachCSSFallbackListeners();
+    }
+    function detachDevicePostureChangeListener() {
+        if (hasDevicePosture)
+            EventListener.remove(devicePosture, { type: 'change', callback: onSegmentChange });
+        detachCSSFallbackListeners();
+    }
+    function attachVisualViewportResizeListener() {
+        EventListener.add(visualViewport, { type: 'resize', callback: onSegmentChange, options: { passive: true } });
+    }
+    function detachVisualViewportResizeListener() {
+        EventListener.remove(visualViewport, { type: 'resize', callback: onSegmentChange, options: { passive: true } });
+    }
+    function attachOnChange() {
+        EventListener.add(globalThis, { type: 'resize', callback: onSegmentChange });
+        if (hasSegmentsAPI) {
+            attachDevicePostureChangeListener();
+        }
+        else if (hasLegacySegmentsAPI) {
+            attachVisualViewportResizeListener();
+            attachDevicePostureChangeListener();
+        }
+        else {
+            getOrCreateCachedDiv();
+            attachVisualViewportResizeListener();
+        }
+    }
+    function detachOnChange() {
+        EventListener.remove(globalThis, { type: 'resize', callback: onSegmentChange });
+        if (hasSegmentsAPI) {
+            detachDevicePostureChangeListener();
+        }
+        else if (hasLegacySegmentsAPI) {
+            detachVisualViewportResizeListener();
+            detachDevicePostureChangeListener();
+        }
+        else {
+            detachVisualViewportResizeListener();
+            releaseDiv();
+        }
+    }
+    function segmentsEqual(segments1, segments2) {
+        if (segments1.length !== segments2.length)
+            return false;
+        for (var i = 0; i < segments1.length; i++) {
+            var segment1 = segments1[i];
+            var segment2 = segments2[i];
+            if (segment1.width !== segment2.width || segment1.height !== segment2.height || segment1.top !== segment2.top || segment1.left !== segment2.left || segment1.bottom !== segment2.bottom || segment1.right !== segment2.right)
+                return false;
+        }
+        return true;
+    }
+    function onSegmentChange() {
+        var next = getValue();
+        if (previousSegments !== null && segmentsEqual(previousSegments, next))
+            return;
+        previousSegments = next;
+        onChangeSubscriptionManager.emit(next);
+    }
+    function buildDiv() {
+        var div = createHiddenElement('div');
+        div.setAttribute('data-viewport-segment-observer', '');
+        div.style.setProperty('position', 'fixed', 'important');
+        div.style.setProperty('top', '0', 'important');
+        div.style.setProperty('left', '0', 'important');
+        div.style.setProperty('visibility', 'hidden', 'important');
+        div.style.setProperty('pointer-events', 'none', 'important');
+        div.style.setProperty('z-index', '-1', 'important');
+        div.style.setProperty('box-sizing', 'content-box', 'important');
+        div.style.setProperty('padding', '0', 'important');
+        div.style.setProperty('margin', '0', 'important');
+        div.style.setProperty('border', '0', 'important');
+        div.style.setProperty('width', '0', 'important');
+        div.style.setProperty('height', '0', 'important');
+        div.style.setProperty('min-width', '0', 'important');
+        div.style.setProperty('min-height', '0', 'important');
+        div.style.setProperty('max-width', 'none', 'important');
+        div.style.setProperty('max-height', 'none', 'important');
+        div.style.setProperty('transition', 'none', 'important');
+        div.style.setProperty('animation', 'none', 'important');
+        div.style.setProperty('display', 'block', 'important');
+        div.style.setProperty('float', 'none', 'important');
+        div.style.setProperty('transform', 'none', 'important');
+        return div;
+    }
+    function getOrCreateCachedDiv() {
+        if (cachedDiv !== null)
+            return cachedDiv;
+        cachedDiv = buildDiv();
+        globalThis.document.body.appendChild(cachedDiv);
+        return cachedDiv;
+    }
+    function releaseDiv() {
+        if (cachedDiv !== null) {
+            if (cachedDiv.parentNode !== null)
+                cachedDiv.parentNode.removeChild(cachedDiv);
+            cachedDiv = null;
+        }
+    }
+    function readFromSegmentsAPI() {
+        var segments;
+        if (hasSegmentsAPI)
+            segments = viewport.segments;
+        else
+            segments = visualViewport.segments;
+        if (segments === null || typeof segments === 'undefined')
+            return [];
+        var results = [];
+        for (var i = 0; i < segments.length; i++) {
+            var segment = segments[i];
+            results.push({
+                width: segment.width,
+                height: segment.height,
+                top: segment.top,
+                left: segment.left,
+                bottom: segment.bottom,
+                right: segment.right,
+            });
+        }
+        return results;
+    }
+    function buildFullViewportSegment() {
+        var width = globalThis.innerWidth;
+        var height = globalThis.innerHeight;
+        return {
+            width: width,
+            height: height,
+            top: 0,
+            left: 0,
+            bottom: height,
+            right: width,
+        };
+    }
+    function readFromCSSEnv(div) {
+        var grid = getSegmentGrid();
+        if (grid.rows === 1 && grid.cols === 1)
+            return [buildFullViewportSegment()];
+        if (typeof support === 'undefined' || typeof div.style.setProperty === 'undefined')
+            return [buildFullViewportSegment()];
+        var results = [];
+        for (var row = 0; row < grid.rows; row++) {
+            for (var col = 0; col < grid.cols; col++) {
+                div.style.setProperty('width', support + '(viewport-segment-width ' + row + ' ' + col + ', -1px)', 'important');
+                div.style.setProperty('height', support + '(viewport-segment-height ' + row + ' ' + col + ', -1px)', 'important');
+                div.style.setProperty('margin-top', support + '(viewport-segment-top ' + row + ' ' + col + ', -1px)', 'important');
+                div.style.setProperty('margin-left', support + '(viewport-segment-left ' + row + ' ' + col + ', -1px)', 'important');
+                div.style.setProperty('margin-bottom', support + '(viewport-segment-bottom ' + row + ' ' + col + ', -1px)', 'important');
+                div.style.setProperty('margin-right', support + '(viewport-segment-right ' + row + ' ' + col + ', -1px)', 'important');
+                var computed = globalThis.getComputedStyle(div);
+                var top_1 = globalThis.parseFloat(computed.marginTop);
+                if (top_1 < 0)
+                    continue;
+                var left = globalThis.parseFloat(computed.marginLeft);
+                var bottom = globalThis.parseFloat(computed.marginBottom);
+                var right = globalThis.parseFloat(computed.marginRight);
+                var width = globalThis.parseFloat(computed.width);
+                var height = globalThis.parseFloat(computed.height);
+                results.push({
+                    width: width,
+                    height: height,
+                    top: top_1,
+                    left: left,
+                    bottom: bottom,
+                    right: right,
+                });
+            }
+        }
+        return results;
+    }
+    function getValue() {
+        if (hasSegmentsAPI || hasLegacySegmentsAPI)
+            return readFromSegmentsAPI();
+        if (cachedDiv !== null)
+            return readFromCSSEnv(cachedDiv);
+        var div = buildDiv();
+        globalThis.document.body.appendChild(div);
+        var results = readFromCSSEnv(div);
+        globalThis.document.body.removeChild(div);
+        return results;
+    }
+    function useCssVariable(prefix) {
+        if (typeof globalThis.document === 'undefined')
+            return noop;
+        var attributes = keys(ENV_PRESETS['viewport-segment']);
+        var element = globalThis.document.documentElement;
+        var lastCount = 0;
+        function applySegments(segments) {
+            for (var i = segments.length; i < lastCount; i++) {
+                for (var j = 0; j < attributes.length; j++) {
+                    element.style.removeProperty('--' + prefix + '-' + i + '-' + attributes[j]);
+                }
+            }
+            lastCount = segments.length;
+            for (var i = 0; i < segments.length; i++) {
+                var segment = segments[i];
+                for (var j = 0; j < attributes.length; j++) {
+                    var attribute = attributes[j];
+                    element.style.setProperty('--' + prefix + '-' + i + '-' + attribute, segment[attribute] + 'px');
+                }
+            }
+        }
+        applySegments(getValue());
+        var unsubscribe = onChangeSubscriptionManager.subscribe(function (segments) {
+            applySegments(segments);
+        });
+        return function () {
+            unsubscribe();
+            for (var i = 0; i < lastCount; i++)
+                for (var j = 0; j < attributes.length; j++)
+                    element.style.removeProperty('--' + prefix + '-' + i + '-' + attributes[j]);
+            lastCount = 0;
+        };
+    }
+    return {
+        get value() {
+            return getValue();
+        },
+        onChange: onChangeSubscriptionManager.subscribe,
+        useCssVariable: useCssVariable,
+    };
 }
 function createVirtualKeyboardObserver() {
     var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
@@ -387,16 +740,16 @@ function createVirtualKeyboardObserver() {
         var top = rect.y;
         var width = rect.width;
         var height = rect.height;
-        var right = (function () {
-            if (width === 0)
-                return 0;
-            return Math.max(0, globalThis.innerWidth - (left + width));
-        })();
-        var bottom = (function () {
-            if (height === 0)
-                return 0;
-            return Math.max(0, globalThis.innerHeight - (top + height));
-        })();
+        var right;
+        if (width === 0)
+            right = 0;
+        else
+            right = Math.max(0, globalThis.innerWidth - (left + width));
+        var bottom;
+        if (height === 0)
+            bottom = 0;
+        else
+            bottom = Math.max(0, globalThis.innerHeight - (top + height));
         return {
             top: top,
             right: right,
@@ -406,17 +759,43 @@ function createVirtualKeyboardObserver() {
             height: height,
         };
     }
+    function useCssVariable(prefix) {
+        if (typeof globalThis.document === 'undefined')
+            return noop;
+        var attributes = keys(ENV_PRESETS['keyboard-inset']);
+        var element = globalThis.document.documentElement;
+        function applyValues(values) {
+            for (var i = 0; i < attributes.length; i++) {
+                var attribute = attributes[i];
+                element.style.setProperty('--' + prefix + '-' + attribute, values[attribute] + 'px');
+            }
+        }
+        applyValues(getValue());
+        var unsubscribe = onChangeSubscriptionManager.subscribe(function (values) {
+            applyValues(values);
+        });
+        return function () {
+            unsubscribe();
+            for (var i = 0; i < attributes.length; i++)
+                element.style.removeProperty('--' + prefix + '-' + attributes[i]);
+        };
+    }
     return {
-        get: getValue,
+        get value() {
+            return getValue();
+        },
         onChange: onChangeSubscriptionManager.subscribe,
+        useCssVariable: useCssVariable,
     };
 }
-function createEnvObserver(preset) {
+function createEnvironmentObserver(preset) {
     if (preset === 'keyboard-inset' && typeof globalThis.navigator.virtualKeyboard !== 'undefined')
         return createVirtualKeyboardObserver();
-    var envMap = ENV_PRESETS[preset];
-    var attributes = keys(envMap);
-    var support = getSupportedEnv();
+    if (preset === 'viewport-segment')
+        return createViewportSegmentObserver();
+    var environmentMap = ENV_PRESETS[preset];
+    var attributes = keys(environmentMap);
+    var support = getSupportedEnvironment();
     var parentReadyCallbacks = [];
     var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
     var elementComputedStyle = {};
@@ -432,15 +811,6 @@ function createEnvObserver(preset) {
     }
     function detachOnChange() {
         removeDetector();
-    }
-    function getSupportedEnv() {
-        if (typeof globalThis.CSS !== 'undefined' && typeof globalThis.CSS.supports === 'function') {
-            if (globalThis.CSS.supports('x: env(x)'))
-                return 'env';
-            if (globalThis.CSS.supports('x: constant(x)'))
-                return 'constant';
-        }
-        return undefined;
     }
     function isSameValues(a, b) {
         for (var i = 0; i < attributes.length; i++) {
@@ -481,7 +851,7 @@ function createEnvObserver(preset) {
                 parentReadyCallbacks[i]();
     }
     function addChild(parent, attribute) {
-        var envVar = envMap[attribute];
+        var envVar = environmentMap[attribute];
         var p1 = globalThis.document.createElement('div');
         var p2 = globalThis.document.createElement('div');
         var c1 = globalThis.document.createElement('div');
@@ -544,9 +914,8 @@ function createEnvObserver(preset) {
     }
     function init() {
         if (typeof support === 'undefined') {
-            for (var i = 0; i < attributes.length; i++) {
+            for (var i = 0; i < attributes.length; i++)
                 elementComputedStyle[attributes[i]] = 0;
-            }
             return;
         }
         elementComputedStyle = {};
@@ -590,8 +959,28 @@ function createEnvObserver(preset) {
         }
         return result;
     }
+    function useCssVariable(prefix) {
+        if (typeof support === 'undefined' || typeof globalThis.document === 'undefined')
+            return noop;
+        var element = globalThis.document.documentElement;
+        function applyValues(values) {
+            for (var i = 0; i < attributes.length; i++) {
+                var attribute = attributes[i];
+                element.style.setProperty('--' + prefix + '-' + String(attributes[i]), values[attribute] + 'px');
+            }
+        }
+        var unsubscribe = onChangeSubscriptionManager.subscribe(function (values) {
+            applyValues(values);
+        });
+        applyValues(readValues());
+        return function () {
+            unsubscribe();
+            for (var i = 0; i < attributes.length; i++)
+                element.style.removeProperty('--' + prefix + '-' + String(attributes[i]));
+        };
+    }
     return {
-        get: function () {
+        get value() {
             if (parentDiv !== null)
                 return readValues();
             init();
@@ -604,55 +993,156 @@ function createEnvObserver(preset) {
             if (typeof support === 'undefined')
                 return noop;
             return onChangeSubscriptionManager.subscribe(callback, options);
-        }
+        },
+        useCssVariable: useCssVariable
     };
 }
 
-var safeAreaInsetObserver = createEnvObserver('safe-area-inset');
-var safeAreaMaxInsetObserver = createEnvObserver('safe-area-max-inset');
-var keyboardInsetObserver = createEnvObserver('keyboard-inset');
-var titlebarAreaObserver = createEnvObserver('titlebar-area');
-var viewportSegmentObserver = createEnvObserver('viewport-segment');
-var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
+function createCustomError(name, Base) {
+    if (Base === void 0) { Base = Error; }
+    function CustomError(message) {
+        if (!(this instanceof CustomError))
+            return new CustomError(message);
+        var error = (function () {
+            if (typeof message === 'undefined')
+                return new Base('');
+            return new Base(message);
+        })();
+        if (typeof Object.setPrototypeOf === 'function')
+            Object.setPrototypeOf(error, CustomError.prototype);
+        else
+            error.__proto__ = CustomError.prototype;
+        error.name = name;
+        if (typeof message !== 'undefined')
+            error.message = message;
+        if (typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+            try {
+                Object.defineProperty(error, Symbol.toStringTag, {
+                    value: name,
+                    writable: false,
+                    enumerable: false,
+                    configurable: true
+                });
+            }
+            catch (_) {
+            }
+        }
+        if (typeof Error.captureStackTrace === 'function') {
+            Error.captureStackTrace(error, CustomError);
+        }
+        else if (Base.captureStackTrace && typeof Base.captureStackTrace === 'function') {
+            Base.captureStackTrace(error, CustomError);
+        }
+        else {
+            try {
+                var tempError = new Base();
+                if (tempError.stack)
+                    error.stack = tempError.stack;
+            }
+            catch (_) {
+            }
+        }
+        return error;
+    }
+    CustomError.prototype = Object.create(Base.prototype, {
+        constructor: {
+            value: CustomError,
+            writable: true,
+            enumerable: false,
+            configurable: true
+        }
+    });
+    try {
+        Object.defineProperty(CustomError.prototype, 'name', {
+            value: name,
+            writable: true,
+            enumerable: false,
+            configurable: true
+        });
+    }
+    catch (_) {
+        try {
+            CustomError.prototype.name = name;
+        }
+        catch (_) {
+        }
+    }
+    try {
+        Object.defineProperty(CustomError, 'name', {
+            value: name,
+            writable: false,
+            enumerable: false,
+            configurable: true
+        });
+    }
+    catch (_) {
+    }
+    return CustomError;
+}
+
+var PermissionNotGrantedError = createCustomError('PermissionNotGrantedError');
+
+var NotSupportedError = createCustomError('NotSupportedError');
+
+var safeAreaInsetObserver = createEnvironmentObserver('safe-area-inset');
+var safeAreaMaxInsetObserver = createEnvironmentObserver('safe-area-max-inset');
+var keyboardInsetObserver = createEnvironmentObserver('keyboard-inset');
+var titlebarAreaObserver = createEnvironmentObserver('titlebar-area');
+var viewportSegmentObserver = createEnvironmentObserver('viewport-segment');
+var onDimensionChangeSubscriptionManager = createSubscriptionManager(attachOnDimensionChange, detachOnDimensionChange);
+var onScreenOrientationChangeSubscriptionManager = createSubscriptionManager(attachOnScreenOrientationChange, detachOnScreenOrientationChange);
+var onDeviceOrientationChangeSubscriptionManager = createSubscriptionManager(attachOnDeviceOrientationChange, detachOnDeviceOrientationChange);
 var dimensionRef = null;
+var screenOrientationRef = null;
+var deviceOrientationRef = null;
 var Dimension = {
     get value() {
         return getDimension();
     },
     environment: getEnvironment(),
-    onChange: onChangeSubscriptionManager.subscribe,
+    screenOrientation: getScreenOrientation(),
+    deviceOrientation: getDeviceOrientation(),
+    onChange: onDimensionChangeSubscriptionManager.subscribe,
     Constants: {
         Orientation: exports.Orientation,
     },
-    Errors: {},
+    Errors: {
+        NotSupportedError: NotSupportedError,
+        PermissionNotGrantedError: PermissionNotGrantedError,
+    },
 };
 function getOrientation() {
-    if (typeof globalThis.screen !== 'undefined') {
+    if (typeof globalThis.screen !== 'undefined' && typeof globalThis.screen.orientation !== 'undefined' && typeof globalThis.screen.orientation.type !== 'undefined') {
         switch (globalThis.screen.orientation.type) {
             case 'portrait-primary':
+                return exports.Orientation.PortraitPrimary;
             case 'portrait-secondary':
-                return exports.Orientation.Portrait;
+                return exports.Orientation.PortraitSecondary;
             case 'landscape-primary':
+                return exports.Orientation.LandscapePrimary;
             case 'landscape-secondary':
-                return exports.Orientation.Landscape;
+                return exports.Orientation.LandscapeSecondary;
         }
     }
     if (typeof globalThis.orientation !== 'undefined') {
         switch (globalThis.orientation) {
             case 0:
+                return exports.Orientation.PortraitPrimary;
             case 180:
-                return exports.Orientation.Portrait;
+                return exports.Orientation.PortraitSecondary;
             case 90:
+                return exports.Orientation.LandscapePrimary;
+            case -90:
             case 270:
-                return exports.Orientation.Landscape;
+                return exports.Orientation.LandscapeSecondary;
         }
     }
-    if (exports.MEDIA_QUERY_LIST.media === 'not all')
-        return exports.Orientation.Unknown;
-    else if (exports.MEDIA_QUERY_LIST.matches)
-        return exports.Orientation.Portrait;
+    if (exports.ORIENTATION_MEDIA_QUERY_LIST.media === 'not all')
+        throw new NotSupportedError('\'screen.orientation\', \'window.orientation\', and the orientation media query are all unsupported');
+    if (exports.ORIENTATION_MEDIA_QUERY_LIST.matches)
+        return exports.Orientation.PortraitPrimary;
     else
-        return exports.Orientation.Landscape;
+        return exports.Orientation.LandscapePrimary;
 }
 function getScale() {
     if (typeof globalThis.devicePixelRatio !== 'undefined')
@@ -661,77 +1151,176 @@ function getScale() {
 }
 function getEnvironment() {
     return {
-        safeAreaInset: {
-            get value() {
-                return safeAreaInsetObserver.get();
-            },
-            onChange: safeAreaInsetObserver.onChange,
+        safeAreaInset: safeAreaInsetObserver,
+        safeAreaMaxInset: safeAreaMaxInsetObserver,
+        keyboardInset: keyboardInsetObserver,
+        titlebarArea: titlebarAreaObserver,
+        viewportSegment: viewportSegmentObserver,
+    };
+}
+function getScreenOrientation() {
+    return {
+        get supported() {
+            return screenOrientationSupported();
         },
-        safeAreaMaxInset: {
-            get value() {
-                return safeAreaMaxInsetObserver.get();
-            },
-            onChange: safeAreaMaxInsetObserver.onChange,
+        get value() {
+            return getOrientation();
         },
-        keyboardInset: {
-            get value() {
-                return keyboardInsetObserver.get();
-            },
-            onChange: keyboardInsetObserver.onChange,
+        onChange: onScreenOrientationChangeSubscriptionManager.subscribe,
+    };
+}
+function getDeviceOrientation() {
+    return {
+        get supported() {
+            return deviceOrientationSupported();
         },
-        titlebarArea: {
-            get value() {
-                return titlebarAreaObserver.get();
-            },
-            onChange: titlebarAreaObserver.onChange,
+        get value() {
+            return getDeviceOrientationValue();
         },
-        viewportSegment: {
-            get value() {
-                return viewportSegmentObserver.get();
-            },
-            onChange: viewportSegmentObserver.onChange,
-        },
+        onChange: onDeviceOrientationChangeSubscriptionManager.subscribe,
     };
 }
 function getDimension() {
+    var innerWidth = 0;
+    var innerHeight = 0;
+    var outerWidth = 0;
+    var outerHeight = 0;
+    var scale = getScale();
     if (typeof globalThis.innerWidth !== 'undefined') {
-        return {
-            innerWidth: globalThis.innerWidth,
-            innerHeight: globalThis.innerHeight,
-            outerWidth: globalThis.outerWidth,
-            outerHeight: globalThis.outerHeight,
-            scale: getScale(),
-            orientation: getOrientation(),
-        };
+        innerWidth = globalThis.innerWidth;
+        innerHeight = globalThis.innerHeight;
+        outerWidth = globalThis.outerWidth;
+        outerHeight = globalThis.outerHeight;
     }
-    return FALLBACK_DIMENSION;
+    return {
+        innerWidth: innerWidth,
+        innerHeight: innerHeight,
+        outerWidth: outerWidth,
+        outerHeight: outerHeight,
+        scale: scale,
+    };
 }
-function attachOnChange() {
+function attachOnDimensionChange() {
     dimensionRef = getDimension();
-    EventListener.add(globalThis, { type: 'resize', callback: onResize });
-    if (typeof globalThis.screen.orientation.addEventListener === 'function')
-        EventListener.add(globalThis.screen.orientation, { type: 'change', callback: onResize });
-    else if (typeof globalThis.orientation !== 'undefined')
-        EventListener.add(globalThis, { type: 'orientationChange', callback: onResize });
-    else if (exports.MEDIA_QUERY_LIST.media !== 'not all')
-        EventListener.add(exports.MEDIA_QUERY_LIST, { type: 'change', callback: onResize });
+    EventListener.add(globalThis, { type: 'resize', callback: onDimensionChange });
 }
-function detachOnChange() {
+function detachOnDimensionChange() {
     dimensionRef = null;
-    EventListener.remove(globalThis, { type: 'resize', callback: onResize });
-    if (typeof globalThis.screen.orientation.removeEventListener === 'function')
-        EventListener.remove(globalThis.screen.orientation, { type: 'change', callback: onResize });
-    else if (typeof globalThis.orientation !== 'undefined')
-        EventListener.remove(globalThis, { type: 'orientationChange', callback: onResize });
-    else if (exports.MEDIA_QUERY_LIST.media !== 'not all')
-        EventListener.remove(exports.MEDIA_QUERY_LIST, { type: 'change', callback: onResize });
+    EventListener.remove(globalThis, { type: 'resize', callback: onDimensionChange });
 }
-function onResize() {
+function onDimensionChange() {
     var dimension = getDimension();
-    if (dimensionRef === null || dimension.innerWidth !== dimensionRef.innerWidth || dimension.innerHeight !== dimensionRef.innerHeight || dimension.outerWidth !== dimensionRef.outerWidth || dimension.outerHeight !== dimensionRef.outerHeight || dimension.scale !== dimensionRef.scale || dimension.orientation !== dimensionRef.orientation)
-        onChangeSubscriptionManager.emit(dimensionRef = dimension);
+    if (dimensionRef === null || dimension.innerWidth !== dimensionRef.innerWidth || dimension.innerHeight !== dimensionRef.innerHeight || dimension.outerWidth !== dimensionRef.outerWidth || dimension.outerHeight !== dimensionRef.outerHeight || dimension.scale !== dimensionRef.scale)
+        onDimensionChangeSubscriptionManager.emit(dimensionRef = dimension);
+}
+function screenOrientationSupported() {
+    if (typeof globalThis.screen !== 'undefined' && typeof globalThis.screen.orientation !== 'undefined' && typeof globalThis.screen.orientation.type !== 'undefined')
+        return true;
+    if (typeof globalThis.orientation !== 'undefined')
+        return true;
+    return exports.ORIENTATION_MEDIA_QUERY_LIST.media !== 'not all';
+}
+function attachOnScreenOrientationChange() {
+    if (typeof globalThis.screen !== 'undefined' && typeof globalThis.screen.orientation !== 'undefined' && typeof globalThis.screen.orientation.addEventListener === 'function')
+        return EventListener.add(globalThis.screen.orientation, {
+            type: 'change',
+            callback: onScreenOrientationChange
+        });
+    else if (typeof globalThis.orientation !== 'undefined')
+        return EventListener.add(globalThis, { type: 'orientationchange', callback: onScreenOrientationChange });
+    else if (exports.ORIENTATION_MEDIA_QUERY_LIST.media !== 'not all')
+        return EventListener.add(exports.ORIENTATION_MEDIA_QUERY_LIST, { type: 'change', callback: onScreenOrientationChange });
+    throw new NotSupportedError('\'screen.orientation\', \'window.orientation\', and the orientation media query are all unsupported');
+}
+function detachOnScreenOrientationChange() {
+    if (typeof globalThis.screen !== 'undefined' && typeof globalThis.screen.orientation !== 'undefined' && typeof globalThis.screen.orientation.removeEventListener === 'function')
+        return EventListener.remove(globalThis.screen.orientation, {
+            type: 'change',
+            callback: onScreenOrientationChange
+        });
+    else if (typeof globalThis.orientation !== 'undefined')
+        return EventListener.remove(globalThis, { type: 'orientationchange', callback: onScreenOrientationChange });
+    else if (exports.ORIENTATION_MEDIA_QUERY_LIST.media !== 'not all')
+        return EventListener.remove(exports.ORIENTATION_MEDIA_QUERY_LIST, { type: 'change', callback: onScreenOrientationChange });
+    throw new NotSupportedError('\'screen.orientation\', \'window.orientation\', and the orientation media query are all unsupported');
+}
+function onScreenOrientationChange() {
+    var orientation = getOrientation();
+    if (screenOrientationRef === null || orientation !== screenOrientationRef)
+        onScreenOrientationChangeSubscriptionManager.emit(screenOrientationRef = orientation);
+}
+function deviceOrientationSupported() {
+    return typeof globalThis.DeviceOrientationEvent !== 'undefined';
+}
+function attachOnDeviceOrientationChange() {
+    return new Promise(function (resolve, reject) {
+        if (!deviceOrientationSupported())
+            return reject(new NotSupportedError('\'window.DeviceOrientationEvent\' does not supported.'));
+        var DeviceOrientationEventWithPermission = DeviceOrientationEvent;
+        if (typeof DeviceOrientationEventWithPermission.requestPermission === 'function') {
+            DeviceOrientationEventWithPermission.requestPermission().then(function (permission) {
+                if (permission === 'granted') {
+                    EventListener.add(globalThis, { type: 'deviceorientation', callback: onDeviceOrientationChange });
+                    return resolve();
+                }
+                return reject(new PermissionNotGrantedError('\'deviceorientation\' permission is not granted.'));
+            }).catch(function (_) {
+                return reject(new NotSupportedError('\'window.DeviceOrientationEvent\' does not supported.'));
+            });
+        }
+        else {
+            EventListener.add(globalThis, { type: 'deviceorientation', callback: onDeviceOrientationChange });
+            return resolve();
+        }
+    });
+}
+function detachOnDeviceOrientationChange() {
+    EventListener.remove(globalThis, { type: 'deviceorientation', callback: onDeviceOrientationChange });
+}
+function onDeviceOrientationChange(event) {
+    deviceOrientationRef = {
+        alpha: event.alpha,
+        beta: event.beta,
+        gamma: event.gamma,
+        absolute: event.absolute,
+    };
+    onDeviceOrientationChangeSubscriptionManager.emit(deviceOrientationRef);
+}
+function getDeviceOrientationValue() {
+    return new Promise(function (resolve, reject) {
+        if (deviceOrientationRef !== null)
+            return resolve(deviceOrientationRef);
+        if (!deviceOrientationSupported())
+            return reject(new NotSupportedError('\'window.DeviceOrientationEvent\' does not supported.'));
+        var DeviceOrientationEventWithPermission = DeviceOrientationEvent;
+        var callback = function (event) {
+            var value = {
+                alpha: event.alpha,
+                beta: event.beta,
+                gamma: event.gamma,
+                absolute: event.absolute,
+            };
+            deviceOrientationRef = value;
+            EventListener.remove(globalThis, { type: 'deviceorientation', callback: callback });
+            return resolve(value);
+        };
+        if (typeof DeviceOrientationEventWithPermission.requestPermission === 'function') {
+            DeviceOrientationEventWithPermission.requestPermission().then(function (permission) {
+                if (permission === 'granted') {
+                    EventListener.add(globalThis, { type: 'deviceorientation', callback: callback });
+                    return;
+                }
+                return reject(new PermissionNotGrantedError('\'deviceorientation\' permission is not granted.'));
+            }).catch(function (_) {
+                return reject(new NotSupportedError('\'window.DeviceOrientationEvent\' does not supported.'));
+            });
+        }
+        else {
+            EventListener.add(globalThis, { type: 'deviceorientation', callback: callback });
+            return;
+        }
+    });
 }
 
 exports.ENV_PRESETS = ENV_PRESETS;
-exports.FALLBACK_DIMENSION = FALLBACK_DIMENSION;
 exports.default = Dimension;

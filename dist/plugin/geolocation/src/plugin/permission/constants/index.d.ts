@@ -12,7 +12,9 @@ export declare enum PermissionType {
     Camera = "camera",
     ClipboardRead = "clipboard-read",
     Microphone = "microphone",
-    MIDI = "midi"
+    MIDI = "midi",
+    DeviceOrientation = "device-orientation",
+    DeviceMotion = "device-motion"
 }
 export declare enum PermissionState {
     Grant = "grant",

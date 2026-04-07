@@ -1,10 +1,20 @@
-import {Dimensions} from "../types";
 import {FALLBACK_MEDIA_QUERY_LIST} from "../../../constants";
 
 export enum Orientation {
-    Portrait = 'portrait',
-    Landscape = 'landscape',
-    Unknown = 'unknown',
+    PortraitPrimary = 'portrait-primary',
+    PortraitSecondary = 'portrait-secondary',
+    LandscapePrimary = 'landscape-primary',
+    LandscapeSecondary = 'landscape-secondary',
+}
+
+export namespace Orientation {
+    export function isLandscape(orientation: Orientation): boolean {
+        return orientation === Orientation.LandscapePrimary || orientation === Orientation.LandscapeSecondary;
+    }
+
+    export function isPortrait(orientation: Orientation): boolean {
+        return orientation === Orientation.PortraitPrimary || orientation === Orientation.PortraitSecondary;
+    }
 }
 
 export const ENV_PRESETS = {
@@ -44,16 +54,12 @@ export const ENV_PRESETS = {
     },
 } as const;
 
-export const FALLBACK_DIMENSION: Dimensions = {
-    innerWidth: -1,
-    innerHeight: -1,
-    outerWidth: -1,
-    outerHeight: -1,
-    scale: 1,
-    orientation: Orientation.Unknown,
-};
+export let ORIENTATION_MEDIA_QUERY_LIST: MediaQueryList;
 
-export let MEDIA_QUERY_LIST: MediaQueryList;
+if (typeof globalThis.matchMedia !== 'undefined') ORIENTATION_MEDIA_QUERY_LIST = globalThis.matchMedia('(orientation: portrait)');
+else ORIENTATION_MEDIA_QUERY_LIST = FALLBACK_MEDIA_QUERY_LIST;
 
-if (typeof globalThis.matchMedia !== 'undefined') MEDIA_QUERY_LIST = globalThis.matchMedia('(orientation: portrait)');
-else MEDIA_QUERY_LIST = FALLBACK_MEDIA_QUERY_LIST;
+export let DEVICE_POSTURE_MEDIA_QUERY_LIST: MediaQueryList;
+
+if (typeof globalThis.matchMedia !== 'undefined') DEVICE_POSTURE_MEDIA_QUERY_LIST = globalThis.matchMedia('(device-posture: folded)');
+else DEVICE_POSTURE_MEDIA_QUERY_LIST = FALLBACK_MEDIA_QUERY_LIST;

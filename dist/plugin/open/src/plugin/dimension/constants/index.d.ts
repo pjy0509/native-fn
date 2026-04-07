@@ -1,8 +1,12 @@
-import { Dimensions } from "../types";
 export declare enum Orientation {
-    Portrait = "portrait",
-    Landscape = "landscape",
-    Unknown = "unknown"
+    PortraitPrimary = "portrait-primary",
+    PortraitSecondary = "portrait-secondary",
+    LandscapePrimary = "landscape-primary",
+    LandscapeSecondary = "landscape-secondary"
+}
+export declare namespace Orientation {
+    function isLandscape(orientation: Orientation): boolean;
+    function isPortrait(orientation: Orientation): boolean;
 }
 export declare const ENV_PRESETS: {
     readonly 'safe-area-inset': {
@@ -40,5 +44,5 @@ export declare const ENV_PRESETS: {
         readonly left: "viewport-segment-left";
     };
 };
-export declare const FALLBACK_DIMENSION: Dimensions;
-export declare let MEDIA_QUERY_LIST: MediaQueryList;
+export declare let ORIENTATION_MEDIA_QUERY_LIST: MediaQueryList;
+export declare let DEVICE_POSTURE_MEDIA_QUERY_LIST: MediaQueryList;

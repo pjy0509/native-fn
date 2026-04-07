@@ -1,7 +1,12 @@
 declare enum Orientation {
-    Portrait = "portrait",
-    Landscape = "landscape",
-    Unknown = "unknown"
+    PortraitPrimary = "portrait-primary",
+    PortraitSecondary = "portrait-secondary",
+    LandscapePrimary = "landscape-primary",
+    LandscapeSecondary = "landscape-secondary"
+}
+declare namespace Orientation {
+    function isLandscape(orientation: Orientation): boolean;
+    function isPortrait(orientation: Orientation): boolean;
 }
 declare const ENV_PRESETS: {
     readonly 'safe-area-inset': {
@@ -39,44 +44,89 @@ declare const ENV_PRESETS: {
         readonly left: "viewport-segment-left";
     };
 };
-declare const FALLBACK_DIMENSION: Dimensions;
-declare let MEDIA_QUERY_LIST: MediaQueryList;
+declare let ORIENTATION_MEDIA_QUERY_LIST: MediaQueryList;
+declare let DEVICE_POSTURE_MEDIA_QUERY_LIST: MediaQueryList;
+
+declare const NotSupportedError: ErrorConstructor;
+
+declare const PermissionNotGrantedError: ErrorConstructor;
 
 type EnvironmentPresetKey = keyof typeof ENV_PRESETS;
-type EnvironmentPresetAttr<K extends EnvironmentPresetKey> = keyof typeof ENV_PRESETS[K];
+type EnvironmentPresetAttribute<K extends EnvironmentPresetKey> = keyof typeof ENV_PRESETS[K];
 type EnvironmentPresetValues<K extends EnvironmentPresetKey> = {
-    [P in EnvironmentPresetAttr<K>]: number;
+    [P in EnvironmentPresetAttribute<K>]: number;
 };
-declare interface DimensionInstance {
-    get value(): Dimensions;
-    environment: Environment;
-    onChange(listener: (dimension: Dimensions) => void, options?: AddEventListenerOptions): () => void;
-    Constants: {
-        Orientation: typeof Orientation;
-    };
-    Errors: {};
+declare interface Environment {
+    readonly safeAreaInset: EnvironmentObserver<'safe-area-inset'>;
+    readonly safeAreaMaxInset: EnvironmentObserver<'safe-area-max-inset'>;
+    readonly keyboardInset: EnvironmentObserver<'keyboard-inset'>;
+    readonly titlebarArea: EnvironmentObserver<'titlebar-area'>;
+    readonly viewportSegment: EnvironmentObserver<'viewport-segment'>;
 }
-declare interface Dimensions {
-    outerWidth: number;
-    outerHeight: number;
-    innerWidth: number;
-    innerHeight: number;
-    scale: number;
-    orientation: Orientation;
+declare interface SegmentsObserver {
+    get value(): EnvironmentPresetValues<'viewport-segment'>[];
+    onChange(listener: (value: EnvironmentPresetValues<'viewport-segment'>[]) => void, options?: AddEventListenerOptions): () => void;
+    useCssVariable(prefix: string): () => void;
 }
-declare interface EnvironmentPreset<K extends EnvironmentPresetKey> {
+declare type EnvironmentObserver<K extends EnvironmentPresetKey> = K extends 'viewport-segment' ? SegmentsObserver : {
     get value(): EnvironmentPresetValues<K>;
     onChange(listener: (value: EnvironmentPresetValues<K>) => void, options?: AddEventListenerOptions): () => void;
+    useCssVariable(prefix: string): () => void;
+};
+declare interface Dimensions {
+    readonly outerWidth: number;
+    readonly outerHeight: number;
+    readonly innerWidth: number;
+    readonly innerHeight: number;
+    readonly scale: number;
 }
-declare interface Environment {
-    safeAreaInset: EnvironmentPreset<'safe-area-inset'>;
-    safeAreaMaxInset: EnvironmentPreset<'safe-area-max-inset'>;
-    keyboardInset: EnvironmentPreset<'keyboard-inset'>;
-    titlebarArea: EnvironmentPreset<'titlebar-area'>;
-    viewportSegment: EnvironmentPreset<'viewport-segment'>;
+declare interface DeviceOrientationValue {
+    readonly alpha: number | null;
+    readonly beta: number | null;
+    readonly gamma: number | null;
+    readonly absolute: boolean;
+}
+declare interface DeviceOrientationInstance {
+    get supported(): boolean;
+    readonly value: Promise<DeviceOrientationValue>;
+    onChange(listener: (value: DeviceOrientationValue) => void, options?: AddEventListenerOptions): () => void;
+}
+declare interface ScreenOrientationInstance {
+    get supported(): boolean;
+    readonly value: Orientation;
+    onChange(listener: (value: Orientation) => void, options?: AddEventListenerOptions): () => void;
+}
+declare interface DimensionInstance {
+    get value(): Dimensions;
+    readonly environment: Environment;
+    readonly screenOrientation: ScreenOrientationInstance;
+    readonly deviceOrientation: DeviceOrientationInstance;
+    onChange(listener: (dimension: Dimensions) => void, options?: AddEventListenerOptions): () => void;
+    readonly Constants: {
+        readonly Orientation: typeof Orientation;
+    };
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly PermissionNotGrantedError: typeof PermissionNotGrantedError;
+    };
 }
 
+declare global {
+    interface DOMRectReadOnly {
+        readonly x: number;
+        readonly y: number;
+        readonly width: number;
+        readonly height: number;
+        readonly top: number;
+        readonly right: number;
+        readonly bottom: number;
+        readonly left: number;
+    }
+    interface VisualViewport {
+        readonly segments?: DOMRectReadOnly[];
+    }
+}
 declare const Dimension: DimensionInstance;
 
-export { ENV_PRESETS, FALLBACK_DIMENSION, MEDIA_QUERY_LIST, Orientation, Dimension as default };
-export type { DimensionInstance, Dimensions, Environment, EnvironmentPreset, EnvironmentPresetAttr, EnvironmentPresetKey, EnvironmentPresetValues };
+export { DEVICE_POSTURE_MEDIA_QUERY_LIST, ENV_PRESETS, ORIENTATION_MEDIA_QUERY_LIST, Orientation, Dimension as default };
+export type { DeviceOrientationInstance, DeviceOrientationValue, DimensionInstance, Dimensions, Environment, EnvironmentObserver, EnvironmentPresetAttribute, EnvironmentPresetKey, EnvironmentPresetValues, ScreenOrientationInstance, SegmentsObserver };

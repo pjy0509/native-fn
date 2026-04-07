@@ -121,8 +121,8 @@ const API_VARIANTS: FullscreenApiVariants = {
 };
 
 const api: FullscreenApiMap | null = detectApi();
-const onChangeSubscriptionManager: SubscriptionManager<FullscreenInstance, FullscreenEventPayload> = createSubscriptionManager<FullscreenInstance, FullscreenEventPayload>(attachOnChange, detachOnChange);
-const onErrorSubscriptionManager: SubscriptionManager<FullscreenInstance, FullscreenEventPayload> = createSubscriptionManager<FullscreenInstance, FullscreenEventPayload>(attachOnError, detachOnError);
+const onChangeSubscriptionManager: SubscriptionManager<FullscreenEventPayload> = createSubscriptionManager<FullscreenEventPayload>(attachOnChange, detachOnChange);
+const onErrorSubscriptionManager: SubscriptionManager<FullscreenEventPayload> = createSubscriptionManager<FullscreenEventPayload>(attachOnError, detachOnError);
 
 const Fullscreen: FullscreenInstance = {
     get supported(): boolean {

@@ -19,9 +19,9 @@ export interface NotificationOptions {
 export declare interface NotificationInstance {
     send(options: NotificationOptions): Promise<Notification>;
     get supported(): boolean;
-    Constants: {};
-    Errors: {
-        NotSupportedError: typeof NotSupportedError;
-        PermissionNotGrantedError: typeof PermissionNotGrantedError;
+    readonly Constants: {};
+    readonly Errors: {
+        readonly NotSupportedError: typeof NotSupportedError;
+        readonly PermissionNotGrantedError: typeof PermissionNotGrantedError;
     };
 }
