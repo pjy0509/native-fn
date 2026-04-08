@@ -398,8 +398,8 @@ function IOSLandscapeOverlay({viewBoxResult, minimapWidth, minimapHeight, isDark
     </>;
 }
 
-function AndroidPortraitOverlay({viewBoxResult, minimapWidth, isDarkMode}: DeviceFrameProps): React.JSX.Element {
-    const {deviceX, deviceY, deviceWidth, deviceHeight} = viewBoxResult;
+function AndroidPortraitOverlay({viewBoxResult, minimapWidth, minimapHeight, isDarkMode}: DeviceFrameProps): React.JSX.Element {
+    const {deviceX, deviceWidth} = viewBoxResult;
     const palette: FramePalette = makeFramePalette(isDarkMode);
     const screenX: number = PADDING;
     const screenY: number = PADDING;
@@ -410,7 +410,7 @@ function AndroidPortraitOverlay({viewBoxResult, minimapWidth, isDarkMode}: Devic
         <rect x={deviceX + deviceWidth} y={screenY + ANDROID_VOL_OFFSET} width={BUTTON_PROTRUSION} height={ANDROID_VOL_SIZE} rx={1.5} fill={palette.button} stroke={palette.buttonStroke} strokeWidth="0.7"/>
         <circle cx={screenCenterX} cy={screenY + ANDROID_CAM_INSET} r={5.5} fill={palette.camera}/>
         <circle cx={screenCenterX} cy={screenY + ANDROID_CAM_INSET} r={2.5} fill={palette.cameraLens} opacity="0.5"/>
-        <rect x={screenCenterX - ANDROID_NAV_HALF_W} y={deviceY + deviceHeight - ANDROID_NAV_INSET} width={ANDROID_NAV_HALF_W * 2} height={ANDROID_NAV_H} rx={1.5} fill={palette.indicator} opacity="0.6"/>
+        <rect x={screenCenterX - ANDROID_NAV_HALF_W} y={screenY + minimapHeight - ANDROID_NAV_INSET} width={ANDROID_NAV_HALF_W * 2} height={ANDROID_NAV_H} rx={1.5} fill={palette.indicator} opacity="0.6"/>
     </>;
 }
 
@@ -421,19 +421,19 @@ function AndroidLandscapeOverlay({viewBoxResult, minimapWidth, minimapHeight, is
     const screenY: number = PADDING;
     const screenWidth: number = minimapWidth;
     const screenHeight: number = minimapHeight;
-    const screenCenterX: number = screenX + screenWidth / 2;
     const cameraCenterX: number = isClockwiseRotation ? screenX + screenWidth - ANDROID_CAM_INSET : screenX + ANDROID_CAM_INSET;
     const powerX: number = isClockwiseRotation ? screenX + screenWidth - ANDROID_L_POWER_X_OFFSET : screenX + ANDROID_L_POWER_X_OFFSET - ANDROID_POWER_SIZE;
     const volX: number = isClockwiseRotation ? screenX + screenWidth - ANDROID_L_VOL_X_OFFSET : screenX + ANDROID_L_VOL_X_OFFSET - ANDROID_VOL_SIZE;
     const cameraCenterY: number = screenY + screenHeight / 2;
     const physicalButtonY: number = isClockwiseRotation ? deviceY + deviceHeight : deviceY - BUTTON_PROTRUSION;
+    const navX: number = isClockwiseRotation ? screenX + ANDROID_NAV_INSET - ANDROID_NAV_H : screenX + screenWidth - ANDROID_NAV_INSET;
 
     return <>
         <rect x={powerX} y={physicalButtonY} width={ANDROID_POWER_SIZE} height={BUTTON_PROTRUSION} rx={1.5} fill={palette.button} stroke={palette.buttonStroke} strokeWidth="0.7"/>
         <rect x={volX} y={physicalButtonY} width={ANDROID_VOL_SIZE} height={BUTTON_PROTRUSION} rx={1.5} fill={palette.button} stroke={palette.buttonStroke} strokeWidth="0.7"/>
         <circle cx={cameraCenterX} cy={cameraCenterY} r={5.5} fill={palette.camera}/>
         <circle cx={cameraCenterX} cy={cameraCenterY} r={2.5} fill={palette.cameraLens} opacity="0.5"/>
-        <rect x={screenCenterX - ANDROID_NAV_HALF_W} y={screenY + screenHeight - ANDROID_NAV_INSET} width={ANDROID_NAV_HALF_W * 2} height={ANDROID_NAV_H} rx={1.5} fill={palette.indicator} opacity="0.6"/>
+        <rect x={navX} y={cameraCenterY - ANDROID_NAV_HALF_W} width={ANDROID_NAV_H} height={ANDROID_NAV_HALF_W * 2} rx={1.5} fill={palette.indicator} opacity="0.6"/>
     </>;
 }
 
