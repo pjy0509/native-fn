@@ -7,6 +7,7 @@ import {SubscriptionManager} from "../../../types/subscription-manager";
 import {EnvironmentObserver, EnvironmentPresetAttribute, EnvironmentPresetKey, EnvironmentPresetValues} from "../types";
 import {DEVICE_POSTURE_MEDIA_QUERY_LIST, ENV_PRESETS} from "../constants";
 import createHiddenElement from "../../../utils/create-hidden-element";
+import Platform, {Browsers, OS} from "../../platform";
 
 declare global {
     interface Navigator {
@@ -256,7 +257,7 @@ function createViewportSegmentObserver(): EnvironmentObserver<'viewport-segment'
         if (hasSegmentsAPI) segments = viewport!.segments;
         else segments = visualViewport!.segments;
 
-        if (segments === null || typeof segments === 'undefined') return [];
+        if (segments === null || typeof segments === 'undefined' || segments.length === 0) return [buildFullViewportSegment()];
 
         const results: EnvironmentPresetValues<'viewport-segment'>[] = [];
 
@@ -400,33 +401,62 @@ function createViewportSegmentObserver(): EnvironmentObserver<'viewport-segment'
 
 function createVirtualKeyboardObserver(): EnvironmentObserver<'keyboard-inset'> {
     const onChangeSubscriptionManager: SubscriptionManager<EnvironmentPresetValues<'keyboard-inset'>> = createSubscriptionManager(attachOnChange, detachOnChange);
+    const virtualKeyboard: VirtualKeyboard = globalThis.navigator.virtualKeyboard!;
+    let pendingRaf: number | null = null;
 
     function attachOnChange(): void {
-        EventListener.add(globalThis.navigator.virtualKeyboard, {type: 'geometrychange', callback: onGeometryChange, options: {passive: true}});
+        EventListener.add(virtualKeyboard, {type: 'geometrychange', callback: onGeometryChange, options: {passive: true}});
     }
 
     function detachOnChange(): void {
-        EventListener.remove(globalThis.navigator.virtualKeyboard, {type: 'geometrychange', callback: onGeometryChange, options: {passive: true}});
+        EventListener.remove(virtualKeyboard, {type: 'geometrychange', callback: onGeometryChange, options: {passive: true}});
+
+        if (pendingRaf !== null) {
+            globalThis.cancelAnimationFrame(pendingRaf);
+            pendingRaf = null;
+        }
     }
 
     function onGeometryChange(): void {
-        onChangeSubscriptionManager.emit(getValue());
+        if (pendingRaf !== null) globalThis.cancelAnimationFrame(pendingRaf);
+
+        if (typeof globalThis.requestAnimationFrame === 'function') {
+            pendingRaf = globalThis.requestAnimationFrame(function (): void {
+                pendingRaf = null;
+                onChangeSubscriptionManager.emit(getValue());
+            });
+        } else {
+            defer(function (): void {
+                onChangeSubscriptionManager.emit(getValue());
+            });
+        }
     }
 
     function getValue(): EnvironmentPresetValues<'keyboard-inset'> {
-        const rect: DOMRect = globalThis.navigator.virtualKeyboard!.boundingRect;
-        const left: number = rect.x;
-        const top: number = rect.y;
+        const rect: DOMRect = virtualKeyboard.boundingRect;
         const width: number = rect.width;
         const height: number = rect.height;
 
-        let right: number;
-        if (width === 0) right = 0;
-        else right = Math.max(0, globalThis.innerWidth - (left + width));
-
+        let top: number;
+        let left: number;
         let bottom: number;
-        if (height === 0) bottom = 0;
-        else bottom = Math.max(0, globalThis.innerHeight - (top + height));
+        let right: number;
+
+        if (height === 0) {
+            top = 0;
+            bottom = 0;
+        } else {
+            top = rect.y;
+            bottom = Math.max(0, globalThis.innerHeight - rect.y);
+        }
+
+        if (width === 0) {
+            left = 0;
+            right = 0;
+        } else {
+            left = rect.x;
+            right = Math.max(0, globalThis.innerWidth - rect.x);
+        }
 
         return {
             top: top,

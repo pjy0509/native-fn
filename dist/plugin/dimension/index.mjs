@@ -603,8 +603,8 @@ function createViewportSegmentObserver() {
             segments = viewport.segments;
         else
             segments = visualViewport.segments;
-        if (segments === null || typeof segments === 'undefined')
-            return [];
+        if (segments === null || typeof segments === 'undefined' || segments.length === 0)
+            return [buildFullViewportSegment()];
         var results = [];
         for (var i = 0; i < segments.length; i++) {
             var segment = segments[i];
@@ -721,31 +721,57 @@ function createViewportSegmentObserver() {
 }
 function createVirtualKeyboardObserver() {
     var onChangeSubscriptionManager = createSubscriptionManager(attachOnChange, detachOnChange);
+    var virtualKeyboard = globalThis.navigator.virtualKeyboard;
+    var pendingRaf = null;
     function attachOnChange() {
-        EventListener.add(globalThis.navigator.virtualKeyboard, { type: 'geometrychange', callback: onGeometryChange, options: { passive: true } });
+        EventListener.add(virtualKeyboard, { type: 'geometrychange', callback: onGeometryChange, options: { passive: true } });
     }
     function detachOnChange() {
-        EventListener.remove(globalThis.navigator.virtualKeyboard, { type: 'geometrychange', callback: onGeometryChange, options: { passive: true } });
+        EventListener.remove(virtualKeyboard, { type: 'geometrychange', callback: onGeometryChange, options: { passive: true } });
+        if (pendingRaf !== null) {
+            globalThis.cancelAnimationFrame(pendingRaf);
+            pendingRaf = null;
+        }
     }
     function onGeometryChange() {
-        onChangeSubscriptionManager.emit(getValue());
+        if (pendingRaf !== null)
+            globalThis.cancelAnimationFrame(pendingRaf);
+        if (typeof globalThis.requestAnimationFrame === 'function') {
+            pendingRaf = globalThis.requestAnimationFrame(function () {
+                pendingRaf = null;
+                onChangeSubscriptionManager.emit(getValue());
+            });
+        }
+        else {
+            defer(function () {
+                onChangeSubscriptionManager.emit(getValue());
+            });
+        }
     }
     function getValue() {
-        var rect = globalThis.navigator.virtualKeyboard.boundingRect;
-        var left = rect.x;
-        var top = rect.y;
+        var rect = virtualKeyboard.boundingRect;
         var width = rect.width;
         var height = rect.height;
-        var right;
-        if (width === 0)
-            right = 0;
-        else
-            right = Math.max(0, globalThis.innerWidth - (left + width));
+        var top;
+        var left;
         var bottom;
-        if (height === 0)
+        var right;
+        if (height === 0) {
+            top = 0;
             bottom = 0;
-        else
-            bottom = Math.max(0, globalThis.innerHeight - (top + height));
+        }
+        else {
+            top = rect.y;
+            bottom = Math.max(0, globalThis.innerHeight - rect.y);
+        }
+        if (width === 0) {
+            left = 0;
+            right = 0;
+        }
+        else {
+            left = rect.x;
+            right = Math.max(0, globalThis.innerWidth - rect.x);
+        }
         return {
             top: top,
             right: right,

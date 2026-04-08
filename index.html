@@ -26,17 +26,43 @@
 
 <script>
 	window.onload = async () => {
-		document.querySelector('div').innerHTML = '<pre>' + JSON.stringify(Native.platform, null, 4) + '</pre>'
-
+		// document.querySelector('div').innerHTML = '<pre>' + JSON.stringify(Native.platform, null, 4) + '</pre>'
 
 		navigator.virtualKeyboard.overlaysContent = true;
+
 		let i = 0;
+
 		function t() {
-			document.getElementById("t").innerText = String(JSON.stringify(navigator.virtualKeyboard.boundingRect)) +  i++
+			document.getElementById("t").innerText = String(JSON.stringify(navigator.virtualKeyboard.boundingRect)) + i++
 			setTimeout(t, 1000)
-        }
-		t()
-		Native.dimension.environment.keyboardInset.onChange((e) => document.querySelector('div').innerHTML = '<pre>' + JSON.stringify(e, null, 4) + '</pre>');
+		}
+
+		// t()
+
+		Native.dimension.environment.keyboardInset.onChange((e) => (document.querySelector('div').innerHTML = '<pre>' + i++ + '-'  + window.innerHeight + JSON.stringify(e, null, 4) + '</pre>'));
+
+		// Native.dimension.environment.keyboardInset.onChange((e) => {
+		// 	if (navigator.virtualKeyboard.boundingRect.y > 0) {
+		// 		document.querySelector('div').innerHTML = '<pre>'
+		// 			+ JSON.stringify(
+		// 				Object.assign(
+		// 					JSON.parse(JSON.stringify(navigator.virtualKeyboard.boundingRect)),
+		// 					{
+		// 						innerWidth: window.innerWidth,
+		// 						innerHeight: window.innerHeight,
+		// 						overlaysContent: navigator.virtualKeyboard.overlaysContent,
+		// 						visualViewportOffsetTop: window.visualViewport?.offsetTop,
+		// 						visualViewportHeight: window.visualViewport?.height,
+		// 						scrollY: window.scrollY,
+		// 						devicePixelRatio: window.devicePixelRatio,
+		// 					}
+		// 				),
+		// 				null,
+		// 				4
+		// 			)
+		// 			+ '</pre>'
+		// 	}
+		// });
 	}
 </script>
 </html>
