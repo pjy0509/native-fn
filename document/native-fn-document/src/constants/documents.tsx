@@ -3422,6 +3422,9 @@ Native.vibration.stop();
 };
 
 const CHANGELOG = {
+    "1.3.4": [
+        "Fix viewport-segment CSS env values not being read correctly in certain environments",
+    ],
     "1.3.2": [
         "Add Native.dimension.screenOrientation — provides current screen orientation and subscribes to orientation changes",
         "Add Native.dimension.deviceOrientation — provides physical device orientation (alpha, beta, gamma) with iOS 13+ permission support",
